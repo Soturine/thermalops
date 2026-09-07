@@ -1,25 +1,26 @@
-# Diagnostics and Repair
+# Diagnostics and Local Remediation
 
 ## Principle
 
-ThermalOps gathers evidence from multiple independent layers, derives findings, recommends the least-impact next action, and separates diagnosis from remediation.
+ThermalOps gathers evidence from multiple independent layers, derives findings, recommends the least-impact next step, and separates diagnosis from preventive maintenance, local remediation, and escalation.
 
 ```text
-Windows APIs + Device APIs + Diagnostic Rules
-                    |
-                    v
-               Evidence
-                    |
-                    v
-                Findings
-                    |
-                    v
-          Recommended Action
-                    |
-         (operator confirmation)
-                    v
-              Repair Plan
+Windows APIs + Vendor APIs + Technician observations + Approved policy
+                             |
+                             v
+                          Evidence
+                             |
+                             v
+                          Findings
+             +---------------+---------------+
+             |               |               |
+             v               v               v
+      Preventive         Local            Escalation
+      recommendation     remediation      recommendation
+                         plan
 ```
+
+A technician is not assumed to be authorized to perform internal hardware repair.
 
 ## Evidence layers
 
@@ -27,73 +28,72 @@ Windows APIs + Device APIs + Diagnostic Rules
 
 Collect where available/authorized:
 
-- Print Spooler state;
-- service configuration relevant to diagnosis;
-- installed printers;
-- selected queue details;
+- Print Spooler state and relevant configuration;
+- installed printers and selected queue details;
 - print jobs and job states;
-- driver name/version/package evidence;
+- driver identity/version/package evidence;
 - port/monitor evidence;
 - print processor evidence in advanced mode;
 - print-related Windows Event Log entries;
-- errors/access-denied/timeouts as first-class evidence.
+- access denied/timeouts/errors as first-class evidence.
 
-Prefer WinSpool/SCM/Event Log APIs over command parsing.
+Prefer supported WinSpool/SCM/Event Log APIs over command-output parsing.
 
 ### PnP / USB
 
-For locally attached devices:
+- physical/PnP presence where observable;
+- hardware/instance identity when policy allows;
+- connect/disconnect evidence;
+- queue/port mapping when determinable.
 
-- PnP presence;
-- hardware/instance identity where policy allows;
-- connection/disconnection evidence;
-- mapped Windows queue/port relationships when determinable.
+Never infer USB presence solely from a friendly string.
 
-Do not claim USB physical presence solely because a queue name contains `USB`.
+### Network / transport
 
-### Network
-
-Only known/explicitly allowed endpoints by default.
+Only known or explicitly authorized endpoints by default.
 
 Potential checks:
 
 - endpoint resolution;
-- TCP reachability to the configured printer service;
-- connection timeout/error;
+- TCP reachability to configured service;
+- timeout/error behavior;
 - TLS capability/certificate evidence where supported.
 
-ICMP ping is not equivalent to printer health and must never be the sole reachability conclusion.
+ICMP alone is not printer health.
 
 ### Vendor-native printer
 
 Zebra first. Normalize supported evidence such as:
 
-- responding;
-- ready to print;
-- head open/closed;
-- media out/present;
-- ribbon out/present where applicable;
-- paused;
-- head too hot/temperature warnings;
+- communication result;
+- ready-to-print;
+- head state;
+- media/ribbon state;
+- pause state;
+- temperature warning;
 - buffer/state conditions;
 - firmware;
 - counters/odometer where supported;
-- selected read-only configuration.
+- selected safe read-only configuration;
+- device-reported warnings/errors.
 
-Vendor status is evidence from the device. Windows queue status remains separate evidence.
+Vendor-native state and Windows queue state remain separate.
+
+### Technician observations
+
+Manual evidence can include visual condition, cable condition, unusual noise, print quality or checklist results. It must carry human/session attribution and never be presented as automatically measured.
 
 ## Status normalization
 
 Do not use:
 
 ```text
-status == 0 => ONLINE
-else => ATTENTION
+status == 0 => ONLINE/HEALTHY
 ```
 
-Windows printer status values may be bitmasks/flags and can represent multiple conditions. Preserve flags and translate them individually.
+Preserve Windows bit flags and vendor-native fields individually.
 
-A normalized status model might expose:
+Suggested normalized components:
 
 ```text
 WindowsQueueState
@@ -104,45 +104,33 @@ ConsumablesState
 MechanicalState
 ThermalState
 JobsState
+EvidenceCompleteness
 ```
 
-## Connection classification
+## Quick Diagnosis examples
 
-Classify from structured evidence where possible:
-
-- USB;
-- DOT4;
-- TCP/IP RAW;
-- TCP/TLS;
-- LPR;
-- Windows share;
-- Bluetooth;
-- serial;
-- parallel;
-- browser/local bridge;
-- unknown.
-
-Display raw port name separately from normalized transport.
-
-## Quick Diagnosis rule examples
-
-### Physical problem takes precedence over unnecessary Windows repair
+### Device condition outranks unnecessary Windows repair
 
 Evidence:
 
 ```text
-Spooler = Running
-Queue jobs = 0
-Transport = reachable
-Device responding = true
-HeadOpen = true
+Spooler=Running
+QueueJobs=0
+Transport=Reachable
+DeviceResponding=true
+HeadOpen=true
 ```
 
 Finding:
 
 ```text
-Windows print path appears operational; device reports head open.
-Recommended: close/inspect printer head before any spooler repair.
+Windows/transport appear operational. Device reports head open.
+```
+
+Recommendation:
+
+```text
+Follow approved physical/check procedure before changing Windows state.
 ```
 
 ### Stale job
@@ -150,48 +138,60 @@ Recommended: close/inspect printer head before any spooler repair.
 Evidence:
 
 ```text
-Spooler = Running
-Selected queue job count > 0
-One job age exceeds policy threshold
-Job state indicates error/stall
+Spooler=Running
+Selected queue contains old failed job
 Device otherwise ready
 ```
 
 Recommended low-impact plan:
 
 ```text
-Cancel selected job only -> re-query queue -> validate device/queue
+Cancel selected job -> re-enumerate -> validate
 ```
+
+### Possible hardware issue / field-scope boundary
+
+Evidence:
+
+```text
+Windows queue healthy
+Transport healthy
+Device repeatedly reports fault
+Allowed field checks completed
+Fault persists
+```
+
+Recommendation:
+
+```text
+Prepare ServiceCase / escalate according to policy.
+```
+
+Do not fabricate a disassembly/parts-replacement instruction.
 
 ### Insufficient evidence
 
-If device-native status cannot be collected, say so. Do not infer `ready` from Windows only.
+If device-native status cannot be collected, say so. Do not infer readiness or healthy hardware from Windows only.
 
-## Repair impact levels
+## Local remediation impact levels
 
 ### Low
 
-Narrow scope, reversible/limited effect.
-
-Example: cancel one selected job.
+Narrow scope, e.g. cancel one selected job.
 
 ### Medium
 
-Service-level impact but expected to be recoverable.
-
-Example: controlled Print Spooler restart.
+Service-level effect with controlled recovery, e.g. restart Print Spooler.
 
 ### High
 
 May affect multiple jobs/queues or configuration.
 
-Example: queue repair that must temporarily stop a shared subsystem.
-
 ### Break glass
 
-Global reset with broad impact. Requires explicit warning and should be disabled by policy in many environments.
+Broad/global reset. Explicit warning, stronger confirmation, policy may disable it entirely.
 
-## RepairPlan schema concepts
+## RepairPlan
 
 ```text
 RepairPlan
@@ -213,96 +213,79 @@ RepairPlan
 
 ## Cancel selected job
 
-Preferred queue cleanup path:
-
-1. resolve target queue identity;
+1. resolve canonical queue identity;
 2. enumerate jobs;
-3. revalidate selected job still exists and belongs to queue;
-4. capture job snapshot;
-5. request explicit operator confirmation if policy requires;
+3. revalidate job still belongs to queue;
+4. snapshot target;
+5. confirm if policy requires;
 6. call supported job-control API;
-7. re-enumerate queue;
-8. report success only when target job is absent/cancelled as expected.
+7. re-enumerate;
+8. report success only after post-condition is observed.
 
-Do not delete all spool files to achieve this.
+Do not delete all spool files for this.
 
-## Controlled spooler restart
+## Controlled Spooler restart
 
-Preflight:
+Preflight captures current service state, relevant startup/policy evidence, visible queue/job snapshot and permission capability.
 
-- current service state;
-- startup configuration/policy evidence where relevant;
-- current queues/jobs snapshot;
-- permission/elevation capability.
+Execution uses bounded stop/start waits and only plan-declared intermediate actions.
 
-Execution:
+Validation checks expected final service state, target queue/jobs and relevant events/errors.
 
-- request stop;
-- wait with timeout;
-- if stop fails, do not continue to deletion/reset actions;
-- perform only plan-declared intermediate action;
-- request start only when consistent with original/policy state;
-- wait with timeout.
-
-Validation:
-
-- verify expected final service state;
-- re-enumerate target queue/jobs;
-- check relevant events/errors;
-- mark partial if service recovered but original fault persists.
-
-Recovery:
-
-- attempt to restore service state when an intermediate step fails;
-- if recovery fails, present high-severity outcome and exact safe next step.
+Recovery attempts to restore the appropriate original/policy state. Partial recovery is reported honestly.
 
 ## Global spool reset
 
-Never the default repair button.
+Never the default repair button. Before implementation require separate capability, broad-impact warning, visible affected scope, snapshot, explicit confirmation, safe path handling, service transaction logic and validation.
 
-Requirements before implementation:
+## Configuration backup/diff
 
-- separate break-glass capability;
-- clear warning that unrelated local print queues/jobs can be affected;
-- snapshot of visible queues/jobs;
-- explicit confirmation;
-- safe path derivation internally;
-- reparse-point/path safety analysis;
-- service-state transaction logic;
-- post-condition validation;
-- audit record.
+Read-only early scope:
 
-## Device configuration backup/diff
-
-Read-only milestone:
-
-- query allowlisted safe configuration keys;
-- normalize values;
+- query allowlisted safe keys;
+- preserve source/units;
+- normalize;
 - export snapshot;
-- compare snapshot/device A vs B;
-- show differences with source/units.
+- compare current vs approved baseline/device;
+- distinguish drift from confirmed fault.
 
-Writing configuration requires a later dedicated design.
+Write-back/import requires separate design and policy.
 
 ## Diagnostic print
 
-A safe diagnostic label is useful for separating software/transport from physical print quality.
+Useful for separating software/transport from print quality, but it is a write operation.
 
-It is still a write operation and must have:
+Require:
 
 - target confirmation;
 - policy permission;
-- clear label dimensions/media assumptions;
-- bounded content;
-- no arbitrary user-provided ZPL in privileged workflows;
-- validation that job reached the selected printer where possible.
+- bounded known content;
+- clear media/dimension assumptions;
+- no arbitrary user ZPL in privileged workflows;
+- validation where possible;
+- technician print-quality observation stored separately.
+
+## Escalation
+
+If the problem lies outside local authorized scope, the correct action may be **no local repair**.
+
+ThermalOps should help create a `ServiceCase` containing the evidence, actions already performed, technician observations and `ServiceDisposition`.
+
+See `FIELD_SERVICE_AND_ESCALATION.md`.
+
+## Preventive relationship
+
+Preventive findings may recommend cleaning/inspection/monitoring/scheduling, but source-backed maintenance tasks live in `PREVENTIVE_MAINTENANCE.md`. Preventive mode must not silently call local remediation.
 
 ## Evidence-driven UI
 
-Each finding should expose a "Why?" or evidence view. A technician should be able to distinguish:
+A technician must be able to distinguish:
 
 - observed fact;
-- inferred conclusion;
-- recommended action;
-- action actually executed;
-- verified result.
+- technician observation;
+- inferred finding;
+- preventive recommendation;
+- local remediation option;
+- escalation recommendation;
+- action executed;
+- verified outcome.

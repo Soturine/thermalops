@@ -1,62 +1,96 @@
 # AI and Knowledge Assistance
 
-AI is optional and downstream of deterministic diagnosis.
+AI is optional and downstream of deterministic evidence, maintenance policy, and authorization rules.
 
 ## Authority model
 
 ```text
-Windows APIs + Vendor APIs + Rules
-              |
-              v
-          Evidence/Findings
-              |
-              +--> Repair policy/plan (deterministic)
-              |
-              +--> AI explanation (optional)
+Windows APIs + Vendor APIs + Technician evidence + Approved rules/policy
+                              |
+                              v
+                       Evidence / Findings
+                    +---------+----------+
+                    |                    |
+                    v                    v
+          Deterministic plan/       AI explanation
+          maintenance/disposition   (optional)
 ```
 
-AI must never be a privileged-control plane.
+AI is never a privileged, maintenance, or service-disposition control plane.
 
 ## Allowed uses
 
-- explain a normalized finding in technician-friendly language;
-- summarize a support bundle;
+- explain a normalized finding;
+- summarize a diagnostic/preventive/service-case bundle;
 - retrieve relevant approved manuals/runbooks;
-- suggest which deterministic diagnostic view to inspect next;
+- suggest which deterministic evidence view to inspect next;
 - translate/simplify technical evidence;
-- generate a draft support note based on verified session facts.
+- draft a support note from verified session facts;
+- explain why a maintenance task is due using the source-backed rule;
+- summarize a configuration/baseline diff;
+- highlight uncertainty or missing evidence.
 
 ## Forbidden uses
 
 - autonomous repair execution;
-- arbitrary PowerShell/cmd generation passed to the helper;
-- overriding customer policy;
-- inventing hardware state;
-- turning uncertain evidence into a confident diagnosis;
-- uploading customer data by default;
-- changing firmware/drivers/configuration without a deterministic approved workflow.
+- arbitrary PowerShell/cmd passed to helper;
+- enabling a disabled capability;
+- overriding organization/customer policy;
+- inventing device/technician state;
+- defining maintenance intervals or component lifetime from intuition;
+- declaring `RemoveFromService` without policy authority;
+- turning a trend into a confirmed failure cause;
+- automatic firmware/driver/configuration change;
+- uploading customer evidence by default.
+
+## Maintenance guardrail
+
+AI may say:
+
+```text
+This cleaning task is due because policy X, sourced from the applicable model guide, requires it after the recorded usage interval.
+```
+
+AI may **not** invent:
+
+```text
+Replace the printhead after 2,000,000 labels.
+```
+
+unless that exact threshold is an approved source-backed rule for the applicable device/context.
+
+## Predictive maintenance
+
+LLM output is not predictive maintenance.
+
+M9 research requires real labeled historical data, a defined prediction target, representative train/validation/test splits, calibration, applicability matrix, drift monitoring and cost analysis for false positives/negatives.
+
+Until then AI may summarize trends but must not claim remaining useful life or “failure in N days”.
 
 ## Offline-first knowledge
 
-A future local knowledge pack can index vendor manuals/runbooks where redistribution/licensing permits it. Answers should cite the exact local source/version used.
+A future local knowledge pack may index manuals/runbooks where redistribution/licensing permits. Answers should cite exact source/version/section where possible.
+
+Do not silently ingest proprietary customer or employer procedures into the public repository.
 
 ## Cloud AI
 
 If ever enabled:
 
-- organization/user opt-in;
-- explicit provider configuration;
+- explicit organization/user opt-in;
+- provider configuration;
+- data classification;
 - redaction before transmission;
-- data-classification and retention review;
-- no secrets/credentials;
-- evidence citations shown with the response;
-- feature remains nonessential to diagnosis/repair.
+- retention/contract review;
+- no secrets;
+- evidence/source citations;
+- nonessential to core operation.
 
-If cloud AI is unavailable, ThermalOps must continue to provide the deterministic finding and recommended action.
+If unavailable, deterministic diagnosis/preventive/reporting continues.
 
-## Guardrail example
+## Example
 
-Input evidence:
+Evidence:
 
 ```text
 HEAD_OPEN=true
@@ -68,13 +102,13 @@ QUEUE=0
 Deterministic finding:
 
 ```text
-Device reports print head open. Windows spooler is running and no queue backlog is observed.
+Device reports printhead open. Windows Spooler is running and no queue backlog is observed.
 ```
 
 AI may explain:
 
 ```text
-Check/close the print head before changing Windows state; current evidence does not justify a spooler restart.
+Current evidence points to a device-side condition rather than a blocked Windows queue. Follow the approved device check before changing Windows state.
 ```
 
-The actual set of enabled buttons comes from policy and deterministic repair-plan rules, not the model output.
+Enabled buttons/disposition come from policy and deterministic rules, not model output.

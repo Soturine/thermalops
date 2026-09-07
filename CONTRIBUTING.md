@@ -1,55 +1,56 @@
 # Contributing
 
-ThermalOps is safety-sensitive support software. Contributions are welcome when they preserve the project constitution and authorization model.
+ThermalOps is safety-sensitive printer lifecycle/support software. Contributions must preserve authorization, evidence integrity, preventive-maintenance sourcing, privacy and least privilege.
 
 ## Before coding
 
-Read `AGENTS.md` and `ENGINEERING_CONSTITUTION.md`.
+Read `AGENTS.md` and `ENGINEERING_CONSTITUTION.md`, then the product/architecture docs relevant to the milestone.
 
-For behavior changes, identify the roadmap milestone and acceptance criterion being advanced.
+For preventive changes read `docs/PREVENTIVE_MAINTENANCE.md`. For field/escalation changes read `docs/FIELD_SERVICE_AND_ESCALATION.md`. For enterprise packaging read `docs/DEPLOYMENT_AND_LIFECYCLE.md`.
 
 ## Change expectations
 
-- keep scope narrow;
-- add/update tests;
-- update docs in the same change;
-- add an ADR for meaningful architecture/security decisions;
-- avoid unrelated refactoring in a safety-critical fix;
+- narrow scope and logical commits;
+- tests with failure/unknown cases;
+- docs in the same change;
+- ADR for architecture/security/lifecycle decisions;
 - preserve read-only guarantees;
-- explain risk for write/privileged changes;
-- include failure-path tests, not only the happy path.
+- keep auto evidence distinct from technician input;
+- identify source/applicability for maintenance rules;
+- explain security/privacy impact for writes, exports and fleet changes;
+- avoid unrelated refactors in safety fixes.
 
-## Commit style
-
-Use clear logical commits, e.g.:
+## Commit examples
 
 ```text
-feat(domain): model printer status flags
+feat(domain): model maintenance due states
+feat(service): add service disposition policy
 fix(spooler): preserve original service state
 security(helper): reject unknown capabilities
 test(portable): verify no-persistence cleanup
-docs(adr): define Zebra adapter boundary
+docs(adr): define enterprise package lifecycle
 ```
 
 ## Pull requests
 
-A PR should state:
+State problem, scope, milestone, design/ADR, tests, security/privacy impact, maintenance source if relevant, known limitations and validation status (`fixed`, `partial`, `experimental`, `deferred`, `not validated`).
 
-- problem;
-- scope;
-- milestone;
-- design/ADR if relevant;
-- tests run;
-- security/privacy impact;
-- known limitations;
-- validation status (`fixed`, `partial`, `experimental`, `deferred`, `not validated`).
+## Third-party code/dependencies
 
-## Third-party code
+Public code is not automatically reusable. Confirm license compatibility, attribution, maintenance and security. Prefer official API/vendor docs and independent implementation.
 
-Do not copy code from a repository merely because it is public. Confirm license compatibility, attribution requirements, maintenance, and security before adding a dependency or implementation.
+Until ThermalOps selects its license, do not assume inbound/outbound terms beyond explicit repository-owner decisions.
 
-Until ThermalOps selects its own project license, do not assume inbound/outbound licensing terms beyond the repository owner's explicit decisions.
+## External maintenance data
 
-## Customer data
+If adding a maintenance task/rule:
 
-Never submit real customer logs, hostnames, usernames, IP addresses, printer serials/configurations, tickets, credentials, or screenshots. Create synthetic fixtures.
+- cite official/approved source;
+- record source version/date/model applicability;
+- include safety notes;
+- test applicability and unknown-data behavior;
+- do not generalize one model's interval to all printers.
+
+## Customer/employer data
+
+Never commit real customer/employer hostnames, usernames, IPs, serials, tickets, configs, internal procedures, credentials, logs, photos or screenshots. Use synthetic fixtures and generic policy abstractions.
