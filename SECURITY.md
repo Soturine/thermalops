@@ -1,26 +1,68 @@
 # Security Policy
 
-ThermalOps is pre-release and is not yet intended for production customer repair, preventive maintenance, fleet monitoring, or service-case automation.
+ThermalOps está em pre-release e **ainda não deve ser tratado como ferramenta production-ready** para customer repair, preventive maintenance, fleet monitoring, ServiceCase automation ou ações privilegiadas.
 
-## Reporting a vulnerability
+## Como reportar uma vulnerabilidade
 
-Do not publish sensitive exploit details, customer data, credentials, proprietary service procedures or privilege-escalation proof-of-concept material in a public issue.
+Não publique em issue pública:
 
-A private security-reporting channel should be configured before public preview. Until then, use a private contact channel available to the repository owner.
+- exploit details sensíveis;
+- credentials/tokens;
+- customer/employer data;
+- proprietary service procedures;
+- privilege-escalation proof of concept;
+- material que permita abuso imediato do Temporary Privileged Helper.
 
-## High-priority security scope
+Um private security-reporting channel deve ser configurado antes do primeiro public preview. Até lá, use um canal privado disponível ao maintainer do repositório.
 
-- arbitrary code/command execution through privileged helper;
+## Escopo de alta prioridade
+
+Vulnerabilidades de prioridade alta incluem, sem se limitar a:
+
+- arbitrary code/command execution através do helper;
 - authorization/policy bypass;
-- imported policy/baseline leading to code execution or capability expansion;
+- confused-deputy entre UI e helper;
+- imported policy/baseline resultando em code execution ou capability expansion;
 - unintended cross-queue/global print deletion;
 - unsafe elevated file/path/reparse-point handling;
-- Portable persistence left behind;
-- customer data leakage via logs/bundles/service cases;
-- attachment/archive path traversal or execution;
+- Portable deixando persistence intencional/não esperada;
+- customer-data leakage por logs, reports, bundles ou ServiceCases;
+- attachment/archive path traversal;
+- attachment execution;
 - unauthorized network scanning;
-- signature/update-chain weaknesses;
-- fleet auth/RBAC/tenant/retention weaknesses once implemented;
-- maintenance/disposition logic that can trigger unsafe unauthorized actions.
+- insecure update/signature chain;
+- fleet authentication/RBAC/retention/tenant-boundary weakness quando implementado;
+- maintenance/disposition logic levando a ação unsafe/unauthorized;
+- forged evidence sendo apresentado como trustworthy automatic evidence;
+- bypass de `--readonly` ou Customer Safe;
+- privilege retained além do tempo necessário;
+- cleanup que remove arquivo/recurso que não pertence ao ThermalOps.
 
-See `docs/SECURITY_AND_PRIVACY.md`.
+## Princípios de triagem
+
+Ao avaliar um report, considerar:
+
+- impacto;
+- exploitability;
+- privilege required;
+- customer-data exposure;
+- scope afetado;
+- recoverability;
+- whether Portable/Enterprise behavior differs;
+- whether the issue can affect unrelated queues/devices;
+- whether evidence or disposition can be falsified.
+
+## Divulgação
+
+Não prometemos prazo de correção enquanto o projeto estiver pre-release, mas safety/security findings devem ser tratados antes de declarar uma capability estável.
+
+Fixes de security não devem remover testes ou enfraquecer guardrails apenas para restaurar o happy path.
+
+## Documentação relacionada
+
+Veja:
+
+- `ENGINEERING_CONSTITUTION.md`;
+- `docs/seguranca/security-e-privacy.md`;
+- `docs/engenharia/testing.md`;
+- `docs/engenharia/release-engineering.md`.

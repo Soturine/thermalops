@@ -1,144 +1,513 @@
 # ThermalOps Engineering Constitution
 
-This constitution governs desktop, portable, enterprise, adapters, preventive maintenance, field service, fleet, tests, releases, documentation and future AI.
+Esta Constitution define o padrão de engenharia do ThermalOps. Ela se aplica ao Desktop, Portable, Enterprise, adapters, preventive maintenance, field service, fleet, AI, testes, CI/CD, packaging, documentação e releases.
 
-## 1. Priority order
+O objetivo é impedir que velocidade, aparência de progresso ou conveniência local enfraqueçam business correctness, safety, privacy, authorization, recoverability e testability.
+
+## 1. Ordem de prioridade
+
+Quando objetivos entrarem em conflito, decidir nesta ordem:
 
 1. business/domain correctness;
-2. safety/security;
-3. authorization/privacy;
-4. reliability/recoverability;
-5. maintainability/testability;
-6. UX/accessibility;
-7. efficiency;
+2. safety e security;
+3. authorization e privacy;
+4. reliability e recoverability;
+5. maintainability e testability;
+6. UX e accessibility;
+7. performance/efficiency;
 8. delivery speed.
 
-Fast behavior that affects the wrong queue, invents maintenance advice, leaks customer data, exceeds technician authority or leaves a machine degraded is not progress.
+Código rápido que pode afetar a queue errada, inventar maintenance advice, ultrapassar autoridade do técnico, vazar customer data ou deixar um endpoint degradado **não é progresso**.
 
-## 2. Domain authority
+## 2. Domain como fonte de verdade
 
-Domain owns printer/job/evidence/finding, maintenance task/inspection/baseline/due, service disposition/case, policy, RepairPlan and post-condition semantics.
+O Domain define o significado de:
 
-UI, Windows APIs, vendor SDKs, files, AI and fleet infrastructure are interfaces, not sources of business truth.
+- printer identity e capability;
+- print jobs;
+- evidence;
+- findings;
+- maintenance task/inspection/baseline/due;
+- TechnicianObservation;
+- HealthAssessment;
+- ServiceDisposition;
+- ServiceCase;
+- policy;
+- RepairPlan/RepairAction;
+- post-condition;
+- validation status.
 
-## 3. Architecture
+UI, Windows APIs, vendor SDKs, files, AI, database e fleet infrastructure são interfaces/implementações. Não redefinem business truth.
 
-Default modular monolith. Domain inward; Application orchestrates; infrastructure/vendor adapters implement boundaries; UI delivers; entry point composes; privileged execution is separate trust boundary.
+## 3. Arquitetura padrão
 
-No microservices/broker/cloud merely for appearance.
+A arquitetura default é **modular monolith**.
 
-## 4. Evidence integrity
+Responsabilidades:
 
-Never collapse distinct sources into an opaque status. Preserve source/timestamp/target/outcome and distinguish observed facts, technician observations, derived findings, recommendations, disposition, actions and validation.
+- Domain possui regras e invariants;
+- Application orquestra use cases;
+- Infrastructure implementa OS/external boundaries;
+- Vendor Adapters isolam protocolos/capabilities específicos;
+- UI é delivery mechanism;
+- entry point é composition root;
+- privileged execution é uma trust boundary separada;
+- Fleet/distributed services só surgem quando houver necessidade real e ADR.
 
-Unknown is not healthy.
+Não criar microservices, brokers, cloud services ou distributed state por aparência arquitetural.
 
-## 5. Preventive-maintenance integrity
+## 4. Dependency direction
 
-- maintenance is read-only-first;
-- intervals/thresholds/lifetimes require approved source/applicability;
-- no invented replacement schedule;
-- baseline drift is a finding, not automatic fault proof;
-- technician physical checks are human evidence;
-- software does not assume disassembly authorization;
-- health scoring, if present, is deterministic, explainable and versioned;
-- predictive claims require separate validated data program.
-
-## 6. Field-service scope
-
-ThermalOps supports diagnosis, preventive inspection, local authorized remediation, evidence, disposition and escalation assistance.
-
-`Repair` does not imply bench/internal hardware repair.
-
-Company/customer/vendor-specific RMA/support workflow is policy/configuration, not hard-coded public core.
-
-## 7. Least privilege / safe defaults
-
-- read-only default;
-- Portable Lite permanently read-only;
-- Pro elevates only approved action;
-- UI remains standard user;
-- helper capabilities typed/schema-validated/allowlisted;
-- no arbitrary shell/script;
-- destructive action requires preview/scope/confirmation/verification;
-- targeted remediation before global reset.
-
-## 8. Repair transaction discipline
-
-Every state-changing action has preconditions, affected resources, impact, snapshot, ordered actions, timeout, post-condition, verification, recovery and audit.
+Dependências apontam para dentro:
 
 ```text
-Preflight -> Snapshot -> Execute -> Verify -> Recovery/Rollback -> Post-condition
+Desktop -> Application -> Domain
+Windows Infrastructure -> ports definidos para dentro
+Vendor Adapters -> ports definidos para dentro
+Privileged Helper -> tiny typed privileged contract
 ```
 
-## 9. Portable purity
+`ThermalOps.Domain` não referencia:
 
-A successful session leaves no intentional service, task, startup entry, persistent helper/daemon, customer log, IPC endpoint or temporary executable copy.
+- WPF;
+- P/Invoke implementation;
+- filesystem implementation;
+- network stack implementation;
+- vendor SDK;
+- database;
+- installer technology;
+- AI SDK.
 
-Cleanup failure is a reported outcome.
+## 5. Evidence integrity
 
-## 10. Privacy
+Nunca colapsar fontes distintas em um status opaco.
 
-Collect only required data. Session-local storage; sanitized export default; full/service-case explicit; no automatic upload; no required telemetry; policy-controlled Enterprise retention.
+Preservar, conforme aplicável:
 
-## 11. Security engineering
+- source;
+- timestamp;
+- target;
+- normalized value;
+- safe raw representation;
+- collection outcome/error;
+- rule/schema version;
+- certainty semantics quando houver inference.
 
-Apply NIST SSDF, Microsoft Windows security guidance, OWASP guidance for future APIs and vendor security docs as relevant.
+Manter separados:
 
-Expected controls include trust boundaries, IPC ACLs, caller validation, schema validation, allowlists, bounded input/timeouts, safe temp files, code signing, SHA-256, SBOM, dependency/license review, secret/static analysis and secure-update design before auto-update.
+```text
+Observed fact
+TechnicianObservation
+Derived Finding
+Recommendation
+ServiceDisposition
+Operator intent
+Executed action
+Verified outcome
+```
 
-Imported policy/baseline is untrusted data and cannot create executable capability.
+`Unknown` não é sinônimo de `Healthy`, `Pass`, `NotDue` ou sucesso.
 
-## 12. Reliability
+## 6. Preventive Maintenance integrity
 
-Define timeout/failure behavior. Bounded retry/backoff for safe recoverable external reads; never blindly retry destructive actions. Preserve original service/config state.
+Preventive Maintenance é read-only-first.
 
-## 13. Observability
+Regras:
 
-Structured events with session/correlation ID, timestamp, component, type, target, outcome, duration when useful, sanitized error and before/after references.
+- interval, threshold e component lifetime exigem approved source + applicability;
+- não inventar replacement schedule;
+- uma regra de um modelo não vira regra universal;
+- baseline drift é finding, não fault proof;
+- technician physical check é human evidence;
+- software não assume autorização para disassembly;
+- manufacturer safety notes devem ser preservadas/referenciadas quando relevantes;
+- `MaintenanceDue` deve representar `Unknown` quando dados obrigatórios faltarem;
+- HealthAssessment precisa ser explicável por componentes;
+- numeric Health Score, se existir, é secondary, deterministic, versioned e auditável;
+- predictive claims exigem programa de validação separado.
 
-Fleet adds health/readiness/metrics appropriate to actual distributed components only.
+## 7. Field Service scope
 
-## 14. Testing
+ThermalOps apoia:
 
-Many domain tests; adapter contracts; real Windows integration; preventive schedule/baseline tests; security/failure tests; few meaningful E2E; hardware-in-the-loop for physical device claims; lifecycle tests for installed Enterprise.
+- diagnosis;
+- Preventive Inspection;
+- field triage;
+- evidence collection;
+- local authorized remediation;
+- reporting;
+- ServiceDisposition;
+- escalation assistance.
 
-Negative paths are mandatory for privileged/repair behavior.
+`Repair` no produto não implica bench/internal hardware repair.
 
-## 15. CI/CD and Git
+Não hard-code no public core:
+
+- RMA workflow específico;
+- customer/company SLA;
+- entitlement;
+- internal ticket schema;
+- quem transporta equipamento;
+- quem contata fabricante;
+- regras proprietárias de peças/substituição.
+
+Esses comportamentos entram por policy/configuration privada quando legítimos.
+
+## 8. Least privilege e safe defaults
+
+- read-only é default;
+- Portable Lite é permanentemente read-only;
+- Portable Pro eleva somente quando uma ação específica realmente exigir;
+- Desktop UI permanece standard-user;
+- helper capabilities são enumeradas, typed e schema-validated;
+- deny generic command execution;
+- destructive/broad action exige preview, scope, impact, confirmation e verification;
+- targeted remediation precede global reset;
+- imported policy nunca amplia capability do executable.
+
+## 9. Privileged boundary
+
+O Temporary Privileged Helper não é um general-purpose utility process.
+
+É proibido expor generic capabilities como:
+
+```text
+ExecuteCommand(string)
+RunPowerShell(string)
+RunCmd(string)
+DeletePath(string)
+WriteRegistry(path, value)
+StartArbitraryService(name)
+InstallArbitraryDriver(path)
+```
+
+Cada nova privileged capability exige code/API change, review, tests, registration e threat analysis proporcional ao risco.
+
+## 10. Repair transaction discipline
+
+Toda state-changing action deve ser modelada com:
+
+- preconditions;
+- affected resources;
+- impact level;
+- snapshot requirements;
+- ordered actions;
+- timeouts;
+- expected post-conditions;
+- verification method;
+- recovery/rollback path;
+- audit events;
+- policy decision.
+
+Fluxo canônico:
+
+```text
+Preflight
+ -> Snapshot
+ -> Present plan/impact
+ -> Explicit confirmation
+ -> Execute
+ -> Verify
+ -> Recovery/Rollback if required
+ -> Post-condition
+ -> Audit event
+```
+
+API success, process exit code `0` ou ausência de exception não substituem post-condition verification.
+
+## 11. Portable purity
+
+Uma Portable session encerrada com sucesso não deixa intencionalmente:
+
+- installed service;
+- scheduled task;
+- startup/Run entry;
+- persistent helper/daemon;
+- temporary IPC endpoint;
+- customer logs;
+- temporary executable copies;
+- app-owned registry persistence;
+- arquivos de sessão ao lado do executable ou no USB sem explicit export.
+
+Cleanup failure é um resultado reportável, não um detalhe a esconder.
+
+Não prometer forensic secure erase quando o filesystem/OS não permite garantia.
+
+## 12. Privacy by design
+
+- collect only what is needed;
+- session-local processing por default;
+- sanitized export por default;
+- full technical e ServiceCase export explícitos;
+- no automatic upload;
+- telemetry não é requerida;
+- Enterprise retention é policy-controlled;
+- redact/pseudonymize identities quando não forem necessárias;
+- não coletar document/label contents sem necessidade aprovada.
+
+## 13. Imported data é untrusted
+
+Policy, baseline, maintenance catalog, support bundle e attachment importados devem ser tratados como untrusted input.
+
+Controles:
+
+- schema/version validation;
+- bounded sizes;
+- safe parsing;
+- no embedded script/expression engine;
+- no arbitrary path/process execution;
+- signature/trust validation quando a feature existir;
+- compatibility/applicability check antes de usar baseline;
+- imported data pode informar/restringir, nunca criar code capability.
+
+## 14. Security engineering
+
+Aplicar, quando relevantes:
+
+- NIST SSDF;
+- Microsoft Windows security guidance;
+- OWASP guidance para futuros APIs/services;
+- vendor security documentation.
+
+Expected controls:
+
+- explicit trust boundaries;
+- IPC ACLs e caller/session validation;
+- allowlists;
+- schema validation;
+- bounded input/timeouts;
+- path/reparse-point safety;
+- code signing;
+- SHA-256 checksums;
+- SBOM;
+- dependency/license review;
+- secret scanning;
+- static analysis/CodeQL;
+- vulnerability scanning;
+- secure update design antes de auto-update.
+
+## 15. Network safety
+
+- local evidence primeiro;
+- known endpoint checks quando possível;
+- broader discovery apenas com explicit operator/policy authorization;
+- bounded range/subnet se discovery for implementado;
+- Customer Safe sem automatic scan;
+- discovery initiation deve ser auditável quando aplicável.
+
+ICMP não equivale a printer health.
+
+## 16. Reliability e recoverability
+
+Cada external operation deve definir:
+
+- timeout;
+- cancellation behavior;
+- retry policy quando seguro;
+- failure state;
+- observability suficiente para diagnóstico.
+
+Retry/backoff é bounded e adequado ao tipo de operação. Nunca repetir destructive action cegamente.
+
+Ao alterar service/configuration, preservar original/policy state. Exemplo: Spooler restart não termina automaticamente em `Running` se o estado/policy original exigir outra coisa.
+
+## 17. Observability
+
+Use structured events, não somente free-form text.
+
+Eventos importantes devem carregar, conforme aplicável:
+
+- session/correlation ID;
+- timestamp;
+- component;
+- event/action/finding type;
+- target ID;
+- outcome;
+- duration;
+- sanitized error detail;
+- before/after references;
+- rule/schema/policy version.
+
+Fleet adiciona health/readiness/metrics apenas para componentes distribuídos que realmente existirem.
+
+## 18. Testing
+
+Testing segue risco, não quantidade de UI screens.
+
+Esperado:
+
+- muitos Domain unit tests;
+- Application tests;
+- adapter contract tests;
+- real Windows integration tests;
+- security/failure-path tests;
+- preventive applicability/baseline tests;
+- redaction/ServiceCase tests;
+- poucos E2E significativos;
+- hardware-in-the-loop para physical/vendor-native claims;
+- lifecycle tests para Enterprise installer/upgrade/uninstall.
+
+Negative paths são obrigatórios para privileged/remediation logic.
+
+Mocks servem para external boundaries verdadeiras, não para esconder integração interna quebrada.
+
+## 19. CI/CD e Git
+
+Fluxo padrão:
 
 ```text
 logical change -> commit -> push -> CI -> next logical change
 ```
 
-Preserve last-known-green; no release tag on red CI; no safety-sensitive auto-merge; security/dependency/license gates become release requirements once configured.
+Regras:
 
-## 16. Supply chain / release
+- WIP baixo;
+- logical commits;
+- preserve last-known-green;
+- CI green antes de release tag;
+- tag aponta para validated source SHA;
+- no safety-sensitive auto-merge;
+- não transformar failed required check em optional sem ADR/rationale;
+- milestone close exige main/origin synchronized e audit de status.
 
-Production distribution should expose semantic version, source SHA, build identity, Authenticode when available, checksums, SBOM, notes, OS/arch support, known limits and provenance where feasible.
+## 20. Supply chain e releases
 
-## 17. Deployment lifecycle
+Uma production distribution deve expor:
 
-Portable has no installer/persistence. Enterprise packaging must support predictable install, silent deployment, offline deployment, upgrade/migration/recovery, uninstall and normal-path no-reboot where technically possible. No early silent self-update.
+- Semantic Version;
+- source commit SHA;
+- build ID;
+- architecture/RID;
+- edition/mode;
+- Authenticode quando signing identity estiver disponível;
+- SHA-256;
+- SBOM;
+- release notes;
+- supported OS/architecture matrix;
+- known limitations;
+- provenance/attestation quando viável.
 
-## 18. UX/accessibility
+Não alegar reproducibility, compatibility ou certification sem validação real.
 
-Show evidence, impact and scope. N1 is guided; N2/N3 can inspect detail. Destructive actions are secondary. Support keyboard navigation, readable contrast, scaling, screen-reader semantics and localization readiness.
+## 21. Deployment lifecycle
 
-## 19. AI
+Portable:
 
-AI may explain/summarize/retrieve approved docs. AI may not execute/authorize repair, define maintenance due, assign disposition, invent state, override policy or upload customer data without explicit policy/consent.
+- no installer;
+- self-contained;
+- offline-first;
+- no hidden persistence.
 
-## 20. Project management
+Enterprise:
 
-Lightweight Kanban/milestones; Definition of Ready/Done by risk. Milestone audit covers gaps, duplicate complexity, security/privacy, tests, observability, docs, licensing and release readiness.
+- packaging decision via ADR;
+- interactive e silent install;
+- silent uninstall;
+- offline deployment;
+- upgrade/migration/recovery;
+- explicit retention behavior;
+- clean uninstall;
+- predictable exit codes/logs;
+- no-reboot normal path quando tecnicamente possível.
 
-## 21. Honest status
+No early silent self-update.
 
-- **fixed** — implemented and validated;
-- **partial** — criteria remain;
-- **experimental** — limited/controlled support;
-- **deferred** — intentionally postponed;
-- **not validated** — implementation exists without required validation.
+## 22. UX e accessibility
 
-Never call a feature production-ready because UI/happy-path exists.
+A UI deve mostrar evidence, uncertainty, impact e scope.
+
+- N1: progressive disclosure e guided workflows;
+- N2/N3: deep evidence e export;
+- destructive actions são secundárias/contextuais;
+- não usar green/red state sem explicação;
+- keyboard navigation;
+- readable contrast;
+- scaling/DPI awareness;
+- screen-reader semantics;
+- localization readiness.
+
+## 23. Localization e technical language
+
+A UI e documentação são pt-BR-first, mas localization-ready.
+
+- código e internal contracts em inglês;
+- Domain type names em inglês;
+- technical terms consolidados preservados em inglês;
+- evitar tradução literal que reduza precisão;
+- user-facing strings ficam fora do business logic;
+- schemas/log event types não mudam com locale;
+- reports podem ser localized sem alterar machine-readable schema.
+
+## 24. AI
+
+AI é optional e downstream de deterministic evidence/rules.
+
+AI pode:
+
+- explain findings;
+- summarize support/preventive/service-case data;
+- retrieve approved docs;
+- draft support notes;
+- traduzir/simplificar evidence.
+
+AI não pode:
+
+- executar ou autorizar repair;
+- definir maintenance interval/due por intuição;
+- atribuir ServiceDisposition sem deterministic policy;
+- inventar device state;
+- override policy;
+- habilitar capability;
+- upload customer data por default;
+- transformar trend em proven failure cause.
+
+LLM output não é predictive maintenance.
+
+## 25. Documentation governance
+
+Documentação é parte da entrega, não cleanup posterior.
+
+Estrutura:
+
+- `docs/produto/` — product behavior e operational concepts;
+- `docs/engenharia/` — architecture implementation contracts, testing e lifecycle;
+- `docs/seguranca/` — threat/security/privacy model;
+- `docs/pesquisa/` — referências externas e patterns;
+- `docs/planejamento/` — roadmap;
+- `docs/adr/` — decisions aceitas/propostas.
+
+Não deixar documentos técnicos soltos no root de `docs/` além do índice.
+
+Behavior change atualiza docs na mesma change. Decisões arquiteturais relevantes recebem ADR.
+
+## 26. Project management
+
+Usar lightweight Kanban/milestones, WIP baixo, Definition of Ready e Definition of Done proporcionais ao risco.
+
+Em milestone boundaries, auditar:
+
+- business-rule drift;
+- gaps;
+- duplication;
+- unnecessary complexity;
+- security/privacy;
+- test debt;
+- observability;
+- accessibility/UX;
+- performance;
+- docs;
+- licensing;
+- supply chain;
+- release readiness.
+
+## 27. Honest status
+
+Use somente status precisos:
+
+- **fixed** — implementado e validado;
+- **partial** — acceptance criteria restantes;
+- **experimental** — suporte limitado/controlado;
+- **deferred** — adiado intencionalmente com rationale;
+- **not validated** — implementação existe sem validação requerida.
+
+Uma screen pronta ou happy path executado uma vez não torna feature production-ready.

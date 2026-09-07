@@ -1,48 +1,265 @@
-# ADR-0004: Explainable maintenance and health model
+# ADR-0004: Maintenance e Health Model Explicável
 
-- Status: Accepted for product design
-- Date: 2026-09-07
+- **Status:** Accepted for product design
+- **Date:** 2026-09-07
 
 ## Context
 
-A preventive-maintenance product needs an understandable summary of device condition, maintenance due state, baseline drift and history without creating misleading magic scores or AI-generated certainty.
+ThermalOps precisa apoiar Preventive Maintenance sem inventar service intervals, misturar device status com maintenance state ou transformar um score opaco em autoridade.
 
-Manufacturer maintenance schedules vary by model, media, print mode and application. Device capabilities also vary.
+O mesmo printer model pode ter diferenças de DPI, firmware, media, ribbon, operating mode, environment e policy. Além disso, parte da condição física só pode ser registrada pelo técnico.
+
+## Problem
+
+Modelos simplificados como:
+
+```text
+printer online => healthy
+```
+
+ou:
+
+```text
+AI score = 87 => healthy
+```
+
+não preservam source, uncertainty, applicability ou maintenance reasoning.
+
+Da mesma forma, comparar toda printer contra um baseline universal gera false positives.
 
 ## Decision
 
-ThermalOps will model preventive maintenance with versioned, source-backed tasks and explainable evidence-derived health assessments.
+Adotar um maintenance/health model composto por concepts distintos:
 
-Primary health UX is categorical/component-based. A numeric score is optional and secondary.
+```text
+MaintenanceTaskDefinition
+MaintenanceInspection
+MaintenanceTaskResult
+MaintenancePolicy
+MaintenanceBaseline
+MaintenanceDue
+MaintenanceFinding
+MaintenanceRecommendation
+TechnicianObservation
+HealthAssessment
+HealthContribution
+ConditionTrend
+ServiceDisposition
+```
 
-Maintenance schedules may be sourced from:
+## Source-backed Tasks
 
-- exact applicable manufacturer documentation;
-- organization-approved policy;
-- approved site/application procedure;
-- validated usage/condition thresholds.
+Toda maintenance task/schedule precisa de:
 
-Unknown applicability/data remains `Unknown`, not healthy.
+- source/reference;
+- version/date quando conhecida;
+- vendor/model/family applicability;
+- capability/context applicability;
+- trigger/interval;
+- safety notes;
+- result semantics.
 
-## Health model requirements
+Se source/applicability necessária estiver ausente, o outcome é `Unknown`/`NotApplicable` conforme regra, nunca uma recommendation inventada.
 
-If a numeric score is added:
+## Baseline Decision
 
-- deterministic/versioned rule set;
-- every contribution visible;
-- unknown values handled explicitly;
-- no LLM-generated weights/scores;
-- not compared across incompatible model/policy classes;
-- evidence and rule version retained in history;
-- no claim of remaining useful life or imminent failure without separate predictive validation.
+`MaintenanceBaseline` é approved/reference state, não universal truth.
 
-## Predictive maintenance
+Applicability deve poder considerar:
 
-Deferred. Requires representative labeled history, a defined prediction target, calibration/validation, applicability matrix, drift monitoring and false-positive/negative cost analysis.
+- vendor/model/family;
+- DPI;
+- media/application context;
+- firmware range;
+- connection context;
+- policy/site profile;
+- schema version.
+
+`ConfigurationDrift` é Finding, não fault proof.
+
+## Automatic vs Human Evidence
+
+`TechnicianObservation` é first-class evidence com provenance própria.
+
+Automatic device/Windows evidence e manual observation não podem compartilhar origem fictícia.
+
+Exemplo:
+
+```text
+Automatic: HeadState=Closed
+TechnicianObservation: Print quality has missing vertical lines
+```
+
+## MaintenanceDue
+
+Suggested normalized states:
+
+```text
+Unknown
+NotApplicable
+NotDue
+DueSoon
+Due
+Overdue
+Blocked
+```
+
+O calculation registra rule/source/version que produziu o resultado.
+
+## HealthAssessment
+
+Primary health UX é component-based.
+
+Exemplo:
+
+```text
+Overall: AttentionRecommended
+Device: OK
+Windows: OK
+Transport: Observation
+Configuration: Drift
+Maintenance: DueSoon
+EvidenceCompleteness: 91%
+```
+
+### Numeric Score
+
+Um numeric Health Score pode existir apenas como secondary representation.
+
+Requirements:
+
+- deterministic;
+- rule/weight versioned;
+- every HealthContribution inspectable;
+- missing evidence treated explicitly;
+- applicability/comparison class known;
+- not generated authoritatively by AI;
+- not interpreted as warranty/failure prediction.
+
+Se esses requirements não trouxerem valor suficiente, o produto pode permanecer sem numeric score.
+
+## ConditionTrend
+
+Historical trend representa mudança de observações ao longo do tempo.
+
+Não equivale a causal diagnosis.
+
+UI/report precisa ser capaz de mostrar:
+
+```text
+Observed series
+Derived trend
+Recommendation
+What is not claimed
+```
+
+## Predictive Boundary
+
+Predictive Maintenance não é consequência automática de HealthAssessment/Fleet history.
+
+Antes de qualquer prediction claim, M9 exige:
+
+- defined target;
+- labeled representative data;
+- validation separation;
+- calibration;
+- false-positive/negative analysis;
+- applicability matrix;
+- drift monitoring;
+- human/policy review.
+
+## ServiceDisposition Relationship
+
+Health/Maintenance state não define sozinho ServiceDisposition.
+
+Disposition combina:
+
+- Findings;
+- evidence;
+- field authority;
+- policy;
+- operator decision quando aplicável.
+
+Exemplo:
+
+```text
+Maintenance: Overdue
+Device: Ready
+Disposition: ContinueWithObservation
+```
+
+ou outro resultado conforme policy. Não hard-code universal mapping.
+
+## Localization
+
+Canonical Domain values permanecem em inglês. Human labels são resources localizáveis.
+
+Exemplo:
+
+```text
+DueSoon -> “Vence em breve” (pt-BR)
+DueSoon -> “Due soon” (en-US)
+```
+
+## Alternatives Considered
+
+### Single Green/Yellow/Red Status
+
+Rejected como primary model porque perde provenance/uncertainty.
+
+Pode existir como summary visual desde que drill-down preserve components/evidence.
+
+### AI-generated Health Score
+
+Rejected como authority por falta de determinism/auditability.
+
+### Universal Vendor Maintenance Schedule
+
+Rejected porque schedules variam por device/context e precisam de source.
+
+### Baseline From “Majority of Fleet” Automatically
+
+Rejected como default. Majority não significa approved/correct, e mixed contexts podem distorcer comparação.
 
 ## Consequences
 
-- `MaintenanceTaskCatalog`, `MaintenanceBaseline`, `MaintenanceDue`, `HealthAssessment`, `HealthContribution` and `ConditionTrend` belong to Domain/Application;
-- vendor adapters expose capabilities/evidence, not maintenance business policy;
-- manufacturer references are versioned inputs rather than copied ad-hoc instructions;
-- Fleet stores underlying contributions/evidence rather than only a final score.
+### Positive
+
+- explainable preventive decisions;
+- safer unknown handling;
+- model/context-specific maintenance;
+- stronger reports/audit;
+- future Fleet analytics with preserved rule versions;
+- AI remains explanatory only.
+
+### Costs
+
+- more Domain types;
+- maintenance catalogs require governance;
+- baseline compatibility logic;
+- score versioning if score is added;
+- richer test matrix.
+
+## Testing Requirements
+
+- task applicability boundaries;
+- missing source/input;
+- due transitions;
+- baseline compatibility/mismatch;
+- drift acknowledgement;
+- TechnicianObservation attribution;
+- HealthContribution explainability;
+- unknown handling;
+- score versioning if present;
+- locale invariance;
+- condition trend semantics.
+
+## Revisit Triggers
+
+Revisitar se:
+
+- sufficient real data supports predictive program;
+- vendor exposes standardized health metric worth mapping;
+- Enterprise needs new comparison/normalization model;
+- maintenance policy model proves insufficient for real contracts;
+- regulatory/service requirements mandate different semantics.
