@@ -1,25 +1,32 @@
 # Roadmap
 
-O roadmap do ThermalOps é **risk-driven**. Read-only evidence, Domain correctness e policy boundaries vêm antes de broad remediation, fleet automation ou AI/predictive features.
+O roadmap do ThermalOps é **risk-driven**. Read-only evidence, Domain correctness, policy boundaries, source/applicability e security vêm antes de broad remediation, managed fleet automation, AI ou predictive claims.
 
-A ordem existe para reduzir retrabalho e evitar que uma capability chamativa dependa de fundações frágeis.
+A expansão recente adiciona três áreas transversais sem alterar esse princípio:
+
+- `Lifecycle & Health` — separar usage/condition/maintenance/current health de RUL;
+- `Guided Operations` — troubleshooting e procedures source-backed sem script/AI control plane;
+- `Self-Service` — standard-user ExperienceProfile, policy-driven e corporate-friendly.
 
 ## Regras do Roadmap
 
-- milestone não é “concluído” por quantidade de files/UI;
+- milestone não é concluído por quantidade de files/UI;
 - exit criteria precisam ser verificáveis;
-- status deve ser honesto;
-- hardware claims exigem HIL;
-- write/privileged milestones exigem failure/security tests;
-- architecture decisions significativas recebem ADR;
+- `Unknown`, `Unsupported`, `Blocked` e `NotValidated` são resultados legítimos;
+- hardware/native claims exigem HIL;
+- write/privileged/native-action milestones exigem failure/security tests;
+- architecture/security decisions relevantes recebem ADR;
 - docs/test/release impact fazem parte da mesma entrega;
-- não pular foundations para chegar em AI/Fleet.
+- não pular foundations para chegar em AI/Fleet;
+- uma capability presente no manual/vendor UI não é automaticamente programmatically supported;
+- Self-Service não pode depender de security bypass;
+- RUL não pode ser implementado como fórmula arbitrária ou LLM output.
 
-## M0 — Product, Safety, Maintenance e Field-Service Foundations
+## M0 — Product, Safety, Lifecycle, Guidance e Self-Service Foundations
 
 ### Objetivo
 
-Definir o que o ThermalOps é, o que não é, como protege customer endpoints e quais boundaries guiarão implementação.
+Definir o que o ThermalOps é, o que não é, como protege customer endpoints e quais Domain/security boundaries guiarão implementation.
 
 ### Deliverables
 
@@ -33,48 +40,61 @@ Definir o que o ThermalOps é, o que não é, como protege customer endpoints e 
 - field-service/preventive scope ADR;
 - maintenance/health ADR;
 - localization ADR;
+- Guided Operations/Knowledge ADR;
+- Self-Service/ExperienceProfile ADR;
+- Lifecycle/Health/RUL semantics ADR;
 - Portable contract;
 - Preventive Maintenance model;
+- Lifecycle & Health model;
+- Guided Operations / Knowledge model;
+- Self-Service model;
 - Field Service/Escalation model;
 - diagnostics/local-remediation model;
 - Deployment/Lifecycle contract;
 - Security/Privacy threat model;
+- Self-Service/Guided Operations threat-model supplement;
 - Support Bundle/ServiceCase direction;
 - Fleet/Condition Monitoring direction;
 - Testing Strategy;
+- dedicated validation matrix para lifecycle/guidance/self-service;
 - Release Engineering plan;
 - public research notes;
-- CI documentation checks;
+- documentation CI checks;
 - license decision;
 - initial issue/backlog.
 
 ### Exit Criteria
 
 - no contradictory safety requirements;
-- read-only, Local Remediation, hardware service e escalation scopes distintos;
-- maintenance rules exigem source/applicability;
-- `Unknown` semantics explícitas;
+- read-only, GuidedManual, AssistedWrite, Local Remediation, hardware service e escalation scopes distinct;
+- knowledge/runbooks cannot create code capability;
+- ExperienceProfile cannot grant authorization;
+- maintenance rules require source/applicability;
+- `Unknown` semantics explicit;
+- lifecycle/current-health/RUL semantics separate;
 - privileged-helper principles accepted;
-- Portable no-persistence contract explícito;
-- localization boundary definida;
-- documentation structure coerente;
-- license selecionada antes de aceitar copied third-party implementation code;
+- Portable no-persistence contract explicit;
+- localization boundary defined;
+- documentation structure coherent;
+- open research gaps explicitly listed rather than guessed;
+- license selected before accepting copied third-party implementation code;
 - CI green.
 
 ### Status
 
-`partial` enquanto license decision e demais M0 governance items permanecerem abertos.
+`partial` while license decision and other M0 governance items remain open.
 
-## M1 — Read-only Windows Diagnosis Foundation
+## M1 — Read-only Windows Diagnosis + Guidance Primitives
 
 ### Objetivo
 
-Criar o primeiro executable útil e seguro: diagnosis Windows read-only com evidence estruturada.
+Criar o primeiro executable útil e seguro: Windows read-only diagnosis com structured evidence e foundations que futuros guided workflows reutilizam.
 
 ### Deliverables
 
 - .NET solution/projects necessários;
-- Domain primitives para PrinterIdentity, Evidence, Finding, Policy e Snapshot;
+- Domain primitives para `PrinterIdentity`, `DiagnosticEvidence`, `DiagnosticFinding`, `Policy`, `PrinterSnapshot`;
+- minimal primitives para `CanonicalSymptom`, `GuidanceSession` e read-only `Runbook` resolution, sem vendor write actions;
 - WinSpool printer enumeration;
 - job enumeration;
 - Print Spooler read state/config evidence;
@@ -85,6 +105,7 @@ Criar o primeiro executable útil e seguro: diagnosis Windows read-only com evid
 - session timeline;
 - Quick Diagnosis rule engine v1;
 - WPF read-only UI;
+- SelfService/Technician presentation proof using same Domain results, sem central auth dependency;
 - localization resource foundation (`pt-BR` reference);
 - sanitized diagnostic report v1;
 - Portable Lite build skeleton;
@@ -93,12 +114,13 @@ Criar o primeiro executable útil e seguro: diagnosis Windows read-only com evid
 ### Non-goals
 
 - privileged helper;
-- repair;
-- firmware write;
-- driver install;
+- device-side config writes;
+- firmware/driver install;
 - broad network scan;
+- managed Self-Service identity/RBAC;
 - Fleet backend;
-- AI dependency.
+- AI dependency;
+- RUL.
 
 ### Exit Criteria
 
@@ -109,13 +131,15 @@ Criar o primeiro executable útil e seguro: diagnosis Windows read-only com evid
 - `status == 0 => healthy` shortcut inexistente;
 - no hidden persistence;
 - no hard-coded business decisions based on localized strings;
-- sanitized report funciona offline.
+- same Domain result across SelfService/Technician presentation test;
+- runbook primitives cannot execute arbitrary content;
+- sanitized report works offline.
 
-## M2 — Safe Local Remediation
+## M2 — Safe Local Remediation Foundation
 
 ### Objetivo
 
-Adicionar um conjunto mínimo de actions que realmente ajudem em field support sem criar generic privileged control plane.
+Adicionar conjunto mínimo de actions úteis em field support sem criar generic privileged control plane. Essa foundation também será reutilizada por future Guided Operations state-changing actions.
 
 ### Deliverables
 
@@ -132,6 +156,7 @@ Adicionar um conjunto mínimo de actions que realmente ajudem em field support s
 - post-condition verification;
 - recovery/rollback;
 - audit events;
+- ActionSafetyClass integration for Windows-side actions;
 - negative/security tests;
 - dedicated destructive test environment.
 
@@ -145,347 +170,373 @@ Adicionar um conjunto mínimo de actions que realmente ajudem em field support s
 - UAC-denied/helper-crash paths seguros;
 - helper cleanup/no persistence validado;
 - all writes policy-gated;
-- `--readonly` continua impossível de burlar;
-- `Repair` continua significando Local Remediation, não hardware service.
+- `--readonly` impossible to bypass;
+- Runbook/AI cannot call helper except through typed registered action;
+- `Repair` continues meaning Local Remediation, not hardware service.
 
-## M3 — Zebra Native Adapter
+## M3 — Zebra Native Evidence, Capabilities e Lifecycle Metrics
 
 ### Objetivo
 
-Adicionar evidence direta da impressora Zebra para diferenciar Windows/transport de physical/vendor-native state.
+Adicionar evidence direta da Zebra e capability discovery para diferenciar Windows/transport de physical/vendor-native state e alimentar preventive/lifecycle/guidance.
 
 ### Deliverables
 
-- Zebra adapter project/contract implementation;
+- Zebra adapter implementation;
 - capability discovery;
-- local/known-endpoint discovery sob policy;
+- local/known-endpoint discovery under policy;
 - supported Link-OS/SGD/ZPL reads;
 - native status normalization;
 - firmware read;
-- counter/odometer read where supported;
+- odometer/counter reads where supported;
+- `UsageMetric` mapping with raw/normalized units;
 - selected read-only configuration;
+- SettingsProvider read capability mapping where supported;
 - device warnings/errors;
-- correlation com Windows PrinterIdentity/evidence;
+- manufacturer warning mapping;
+- correlation with Windows `PrinterIdentity`;
 - parser safety limits;
-- contract tests;
-- real hardware validation matrix.
+- adapter contract tests;
+- real HIL matrix.
+
+### Native diagnostic research track
+
+Mapear, model by model and interface by interface, whether programmatic support exists for candidates such as:
+
+```text
+ConfigurationReport
+NetworkConfigurationReport
+PrintQualityReport
+CommunicationDiagnosticsTest
+SensorProfileReport
+MediaCalibration
+```
+
+A feature remains `planned/not validated` until exact invocation/applicability/HIL exist.
 
 ### Exit Criteria
 
-- Windows queue e physical-device status separados;
-- unsupported capability apresentada honestamente;
-- malformed/truncated/oversized/timeout paths seguros;
-- claimed model/capability combinations validados em hardware real;
+- Windows queue and physical-device status separated;
+- unsupported capability shown honestly;
+- `OperatingHours` not populated unless source/interface proves support;
+- usage unit/resettable semantics tested;
+- malformed/truncated/oversized/timeout paths safe;
+- claimed model/capability combinations HIL-validated;
 - no generic arbitrary vendor command interface;
-- no firmware/config write salvo novo ADR/milestone approval.
+- no firmware/config write by default.
 
-## M4 — Support + Preventive Suite
+## M4 — Support + Preventive + Guided Operations Suite
 
 ### Objetivo
 
-Transformar diagnosis pontual em workflow completo de preventiva, report e escalation handoff.
+Transform point-in-time diagnosis into complete preventive, guided troubleshooting, report and escalation workflows.
 
 ### Deliverables
 
 - `MaintenanceInspection` v1;
-- versioned/source-backed MaintenanceTaskCatalog;
+- source-backed `MaintenanceTaskCatalog`;
 - Technician checklist;
 - `MaintenanceDue` states;
 - MaintenanceBaseline import/export;
 - baseline compatibility validation;
 - configuration diff/drift;
-- HealthAssessment components;
-- optional explainable numeric score somente se justified;
+- `HealthAssessment` components;
+- `ComponentCondition` v1 for supported evidence;
+- optional explainable numeric score only if justified;
 - Preventive Report;
-- versioned support schemas;
-- sanitized/full Support Bundle;
+- versioned Support Bundle schemas;
 - `ServiceDisposition`;
 - `ServiceCase`/escalation package;
 - privacy preview;
-- attachment safety foundation, se attachments entrarem no milestone;
-- diagnostic label sob policy;
-- N1 -> N2/N3 handoff workflow;
-- localization dos human-readable reports.
+- diagnostic label under policy;
+- data-only Runbook schema and repository;
+- guided troubleshooting read/manual workflows;
+- local Knowledge Pack foundation with manifest/hash/source metadata;
+- source/version/applicability UI;
+- GuidanceSession timeline and ServiceCase linkage;
+- approved Zebra native diagnostic actions only for validated capabilities;
+- Commissioning/Return-to-Service design prototype, write phases possibly deferred;
+- localization of human-readable guidance/reports.
 
 ### Exit Criteria
 
-- nenhum invented maintenance interval;
-- task source/version/applicability preservadas;
-- automatic vs TechnicianObservation distinguíveis;
-- incompatible baseline tratado corretamente;
-- `Unknown` não vira healthy/not-due;
-- redaction tests cobrem identifiers;
-- diagnostic print impossível em read-only;
-- ServiceDisposition é policy-aware;
-- `RemoveFromService` exige explicit authority;
-- schemas versionados;
-- bundle manifest/hash validado;
-- archive/path handling seguro;
-- session cleanup/no persistence validado.
+- no invented maintenance interval/lifetime;
+- task source/version/applicability preserved;
+- automatic vs TechnicianObservation distinct;
+- incompatible baseline handled;
+- `Unknown` not converted to healthy/not-due;
+- Health is not RUL;
+- invalid Runbook/Knowledge Pack cannot execute anything;
+- diagnostic/write action impossible read-only;
+- ServiceDisposition policy-aware;
+- schemas versioned;
+- archive/path handling safe;
+- local Knowledge Pack works offline for supported scenario;
+- GuidanceSession can end in resolution or escalation without AI;
+- HIL validates each advertised native action;
+- session cleanup/no persistence validated.
 
-## M5 — Enterprise Hardening e Deployment Lifecycle
+## M5 — Enterprise Hardening, Managed Self-Service e Deployment Integrations
 
 ### Objetivo
 
-Transformar artifacts de desenvolvimento em distribuição corporativa previsível e governável.
+Transform development artifacts into predictable corporate distribution and make approved Self-Service usable in restrictive enterprise environments without bypassing endpoint controls.
 
 ### Deliverables
 
 - production signing pipeline;
-- SHA-256 checksums;
-- SBOM;
-- provenance/attestation where feasible;
-- CodeQL/static analysis;
-- dependency/vulnerability gates;
-- license inventory/gates;
+- SHA-256/SBOM/provenance;
+- CodeQL/static/dependency/license gates;
 - policy profiles hardening;
-- WDAC/AppLocker/EDR deployment guidance;
+- WDAC/App Control/AppLocker/EDR deployment guidance;
 - installed-edition packaging ADR;
-- interactive install;
-- silent install/uninstall;
+- interactive and silent install/uninstall;
 - offline deployment;
 - deterministic exit codes/logs;
-- upgrade/migration;
-- rollback/recovery;
+- upgrade/migration/rollback;
 - data retention choices;
 - clean uninstall;
-- no-reboot normal-path validation;
-- helper security review;
-- stable release procedure.
+- no-reboot normal path validation;
+- managed `SelfService` ExperienceProfile;
+- user/asset scope architecture;
+- optional organization identity/SSO integration design;
+- helpdesk connector interface + one optional reference connector only when justified;
+- outbound-only ServiceCase submission semantics;
+- proxy/firewall endpoint documentation;
+- signed/trusted Knowledge Pack distribution design if needed;
+- helper and integration security review.
 
 ### Exit Criteria
 
-- artifacts verifiably signed quando signing infrastructure disponível;
-- package final smoke-tested;
-- clean/silent install/uninstall tests green;
-- N-1 -> N upgrade green;
-- migration failure/recovery testado;
-- Portable no-persistence tests green;
-- endpoint application-control review docs completas;
-- security findings resolved ou explicitamente accepted com residual risk;
-- project/dependency licensing adequado à distribuição.
+- standard-user Self-Service normal flow has no UAC;
+- ExperienceProfile cannot grant capabilities;
+- asset-scope tests pass for managed mode;
+- endpoint-control blocked behavior is explicit and safe;
+- no recommendation to bypass corporate controls;
+- privacy preview matches helpdesk payload;
+- connector failure falls back to export;
+- packages/install lifecycle tests green;
+- Portable independence/no-persistence remains green;
+- license and redistribution requirements satisfied.
 
-## M6 — Fleet + Condition Monitoring
+## M6 — Fleet + Condition Monitoring + Health History
 
 ### Prerequisite
 
-Dedicated ADR para persistence, identity, agent/service, Central API, auth/RBAC, TLS/certificates e retention.
+Dedicated ADR for persistence, identity, agent/service, Central API, auth/RBAC, TLS/certificates and retention.
 
-### Objetivo
+### Objective
 
-Adicionar visão contínua e maintenance by exception sem tornar Portable dependente de backend.
+Add continuous visibility and maintenance by exception without making Portable dependent on backend.
 
 ### Candidate Deliverables
 
 - managed inventory;
 - device identity lifecycle;
 - maintenance schedule/history;
+- usage history;
+- component/HealthAssessment history;
 - MaintenanceBaseline assignment;
 - configuration drift history;
-- HealthAssessment history;
 - ConditionTrend;
-- recurring ServiceCase/failure views;
+- recurring ServiceCase analysis;
 - explainable AlertRule engine;
 - debounce/dedup/cooldown;
 - maintenance-window suppression;
 - maintenance-by-exception dashboard;
-- RBAC;
-- audit;
-- retention/deletion;
+- compatible peer-group comparisons;
+- RBAC/audit/retention/deletion;
 - backup/restore;
-- managed collector/agent se necessário;
+- managed collector/agent if necessary;
 - health/readiness/metrics;
 - offline backlog/degraded behavior.
 
 ### Exit Criteria
 
-- Portable totalmente funcional sem Fleet;
-- identity collisions tratadas;
-- security/RBAC model reviewed;
-- TLS/certificate lifecycle definido;
-- retention policy validada;
-- backup/restore testados;
-- alert storm controls testados;
+- Portable fully functional without Fleet;
+- identity collisions/replacements handled;
+- security/RBAC reviewed;
+- retention validated;
+- backup/restore tested;
 - every alert drills down to evidence/rule version;
-- trend não é apresentada como proven cause;
-- central agent/service usa least privilege;
-- upgrade/migration operacional testado.
+- trend not presented as causation;
+- high usage not presented as fault;
+- central agent/service least privilege;
+- upgrade/migration operationally tested.
 
 ## M7 — Multi-vendor Adapters
 
-### Objetivo
+### Objective
 
-Adicionar vendor support de acordo com demanda real, hardware disponível e official interface quality.
+Add vendor support according to real demand, hardware availability and official interface quality.
 
-Candidates iniciais podem incluir:
+Candidates may include Honeywell, TSC, SATO and others only when justified.
 
-- Honeywell;
-- TSC;
-- SATO;
-- outros somente quando justificados.
+### Acceptance Requirements
 
-### Adapter Acceptance Requirements
-
-- business/use-case demand;
+- real business/use-case demand;
 - official protocol/SDK review;
 - license/redistribution review;
 - capability matrix;
 - contract tests;
 - parser/security review;
 - HIL hardware;
-- no vendor-specific leakage into Domain;
-- known limitations;
-- model/firmware/transport applicability.
+- Lifecycle/Usage metrics semantics mapped without assuming parity;
+- Guided Operations source/runbook applicability;
+- no vendor leakage into Domain;
+- known limitations.
 
-“Multi-vendor” não significa que todos os vendors precisam oferecer as mesmas capabilities.
+`Multi-vendor` does not mean every vendor exposes identical status, counters, self-tests or settings.
 
 ## M8 — Knowledge / AI Assistance
 
-### Objetivo
+### Objective
 
-Adicionar optional assistance sem tornar AI source of truth/control plane.
+Add optional AI/RAG assistance without making model output a source of truth/control plane.
 
 ### Candidate Deliverables
 
-- local approved manual/runbook retrieval;
+- approved manual/runbook retrieval;
 - source/evidence citations;
-- Finding explanation;
-- Preventive Report summary;
-- ServiceCase summary;
+- natural-language symptom -> candidate canonical symptom;
+- Finding/Health explanation;
+- Preventive/Guidance/ServiceCase summary;
 - configuration diff explanation;
 - support-note draft;
 - multilingual explanation;
-- optional cloud provider integration sob explicit privacy policy;
-- RAG prompt-injection defenses;
+- optional cloud provider under explicit privacy policy;
+- prompt-injection defenses;
 - AI evaluation harness.
 
 ### Exit Criteria
 
-- core funciona totalmente com AI disabled;
-- AI não executa/habilita privileged action;
-- AI não define maintenance due/ServiceDisposition;
+- core Guided Operations fully works with AI disabled;
+- AI cannot select/authorize typed action without deterministic re-resolution;
+- AI cannot define maintenance due/ServiceDisposition/RUL;
 - no customer-data upload by default;
 - redaction/privacy tests;
-- source/evidence citations visíveis;
-- unsupported claims/uncertainty avaliados;
-- deterministic fallback funcional.
+- source/evidence citations visible;
+- unsupported claims/uncertainty evaluated;
+- deterministic fallback works.
 
-## M9 — Predictive-Maintenance Research
+## M9 — Predictive Maintenance / Remaining Useful Life Research
 
 ### Status
 
-`deferred` e **não é promised product feature**.
+`deferred` and **not a promised product feature**.
 
 ### Entry Criteria
 
-Só iniciar com:
+Only start with:
 
-- volume suficiente de historical data;
+- sufficient historical data volume;
 - representative populations;
-- useful business target;
-- clear labels/ground truth;
-- privacy/legal basis para dados;
-- baseline deterministic metrics.
+- defined failure/component target;
+- labels/ground truth;
+- privacy/legal basis;
+- deterministic baseline metrics;
+- clear business value.
 
 ### Validation Requirements
 
 - defined prediction target;
-- representative dataset;
-- train/validation/test separation;
-- time leakage prevention;
-- false-positive/false-negative cost analysis;
+- treatment of maintenance/replacement/censoring;
+- temporal train/validation/test separation;
+- leakage prevention;
+- false-positive/negative cost;
 - calibration;
-- confidence/reliability analysis;
-- device/model applicability matrix;
+- applicability matrix;
 - concept/data drift monitoring;
-- comparison to deterministic baseline;
-- human review;
-- policy boundary;
+- benchmark against deterministic rules;
+- human/policy review;
 - rollback/disable criteria;
-- prospective validation antes de high-stakes claim.
+- prospective validation before high-stakes claim.
 
-### Forbidden Early Claim
-
-Não publicar:
+### Forbidden Early Claims
 
 ```text
-“Printer will fail in N days.”
-“Printhead has X days remaining.”
+Printer will fail in N days
+Printhead has 62% life remaining
+Component must be replaced next week
 ```
 
-sem validation suficiente para aquele target/population.
+unless validated for the explicit applicability class.
 
 ## Cross-Milestone Audit
 
-Ao fim de cada milestone revisar:
+At every milestone boundary review:
 
 ### Business / Domain
 
 - business-rule drift;
-- contradictory semantics;
-- missing Domain concepts;
-- UI redefinindo Domain;
+- health/lifecycle semantic collapse;
+- ExperienceProfile mistaken for authorization;
+- knowledge mistaken for executable authority;
+- missing source/applicability;
 - policy bypass.
 
 ### Architecture
 
 - boundary leakage;
-- duplicated modules;
-- unnecessary complexity;
+- duplicate diagnosis engines;
+- unnecessary projects/services;
 - premature distributed architecture;
-- vendor leakage.
+- vendor leakage;
+- general-purpose runbook scripting creeping in.
 
 ### Safety / Security / Privacy
 
 - new trust boundaries;
-- privileged surface;
-- imported data handling;
+- privileged/vendor write surface;
+- knowledge/import handling;
 - customer-data collection;
-- network behavior;
+- helpdesk/network behavior;
 - persistence;
-- threat-model updates.
+- threat-model updates;
+- endpoint-control compatibility.
 
 ### Quality
 
-- test debt;
-- flaky tests;
+- test debt/flakiness;
 - failure-path coverage;
 - HIL coverage;
+- units/conversion correctness;
 - observability;
 - performance budgets.
 
-### UX / Localization
+### UX / Accessibility / Localization
 
-- accessibility;
 - progressive disclosure;
-- technical terminology consistency;
-- missing localization resources;
-- safety-warning clarity.
+- same Domain result across profiles;
+- plain-language Self-Service;
+- technical detail availability;
+- accessibility;
+- safety translation quality;
+- uncertainty visible.
 
 ### Release / Supply Chain
 
 - dependency/license status;
-- SBOM;
-- static/security gates;
-- packaging;
-- docs;
+- vendor SDK/manual redistribution status;
+- SBOM/security gates;
+- packaging/signing;
 - known limitations;
 - release readiness.
 
 ## Honest Status Vocabulary
 
-Use:
+Use only:
 
-- **fixed** — implemented e required validation concluída;
-- **partial** — acceptance criteria faltando;
-- **experimental** — funciona em subset/controlled conditions;
-- **deferred** — intentionally postponed com rationale;
-- **not validated** — implementation existe sem required validation.
+- `fixed` — implemented and required validation completed;
+- `partial` — acceptance criteria missing;
+- `experimental` — works in controlled subset;
+- `deferred` — intentionally postponed with rationale;
+- `not validated` — implementation exists without required validation.
 
-Não usar “done”, “stable” ou “supported” quando essas palavras escondem validation gaps.
+Do not use `done`, `stable`, `supported`, `predictive` or `remaining life` when these terms hide validation gaps.
 
-## Próximo Passo Atual
+## Próximo passo atual
 
-Enquanto M0 governance não estiver completamente fechado, o implementation work pode avançar de forma incremental no M1 somente se não depender da decisão pendente de licensing/copying de terceiros.
+M0 remains `partial` primarily because governance/licensing remains open. Implementation can proceed incrementally in M1 without waiting for AI, Fleet or predictive work.
 
-O primeiro objetivo executable permanece: **read-only Windows diagnosis foundation**, com code e tests em inglês, UI localization-ready e pt-BR como locale de referência.
+The first executable objective remains **read-only Windows diagnosis**, now with enough Domain/architecture planning to ensure it can later feed Guided Operations, Self-Service and Lifecycle/Health without redesigning the core.

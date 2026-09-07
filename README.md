@@ -1,130 +1,270 @@
 # ThermalOps
 
-ThermalOps é uma plataforma Windows-first para **diagnóstico seguro, manutenção preventiva, field service, triagem, local remediation, coleta de evidências, escalation assistance e futura gestão de fleet/condition monitoring de impressoras térmicas**.
+ThermalOps é uma plataforma Windows-first para **diagnóstico seguro, manutenção preventiva, field service, triagem, local remediation, Guided Operations, Lifecycle & Health, Self-Service, coleta de evidências, escalation assistance e futura gestão de fleet/condition monitoring de impressoras térmicas**.
 
-O primeiro adapter de fabricante será Zebra. A arquitetura é intencionalmente vendor-neutral para permitir Honeywell, TSC, SATO e outros fabricantes sem espalhar regras específicas pelo Domain.
+O primeiro Vendor Adapter será Zebra. A arquitetura permanece intencionalmente vendor-neutral para permitir Honeywell, TSC, SATO e outros fabricantes sem espalhar vendor-specific rules pelo Domain.
 
-> **Status do projeto:** M0 — fundações de produto, arquitetura, segurança, manutenção preventiva e field service. Nenhuma capacidade de diagnóstico físico, remediation, preventiva ou fleet deve ser considerada validada até cumprir os acceptance criteria, testes e validações de hardware previstos no roadmap.
+> **Status do projeto:** M0 — fundações de produto, arquitetura, segurança, manutenção preventiva, field service, Lifecycle/Health, Guided Operations e Self-Service. Nenhuma capability física, native diagnostic action, remediation, preventive, Self-Service gerenciado, Fleet ou predictive feature deve ser considerada validada até cumprir os acceptance criteria, testes, source review e hardware validation previstos no roadmap.
 
 ![Visão conceitual do ThermalOps](docs/assets/thermalops-concept-overview.png)
 
-> **Imagem conceitual.** A interface, versões, fabricantes, números, Health Score e textos mostrados são ilustrações da direção do produto, não evidência de funcionalidades já implementadas. A arte também pode conter termos promocionais ilustrativos que não representam status jurídico, de licenciamento ou certificação atual do projeto.
+> **Imagem conceitual.** A interface, versões, fabricantes, números, Health Score e textos mostrados são ilustrações da direção do produto, não evidência de funcionalidades já implementadas. A arte também pode conter termos promocionais ilustrativos que não representam status jurídico, de licenciamento, parceria ou certificação atual do projeto.
 
 ## Por que o ThermalOps existe
 
-Em operações que dependem de impressoras térmicas, uma falha raramente pertence a uma única camada. O problema pode estar no Windows Print Subsystem, queue, job, driver, port, USB/PnP, network transport, configuração, consumível, estado físico reportado pelo equipamento ou em uma condição que o software sozinho não consegue observar.
+Em operações que dependem de impressoras térmicas, uma falha raramente pertence a uma única camada. O problema pode estar no Windows Print Subsystem, queue, job, driver, port, USB/PnP, network transport, configuração, consumível, firmware, estado físico reportado pelo equipamento, maintenance condition ou em algo que software sozinho não consegue observar.
+
+Além de responder a incidentes, a operação precisa saber:
+
+- o que está saudável agora;
+- o que não pôde ser verificado;
+- quanto o equipamento vem sendo usado quando counters existem;
+- quais maintenance tasks estão due;
+- quais componentes possuem warnings/observations;
+- o que mudou em relação a baseline/history;
+- qual próximo passo é seguro e aplicável ao modelo;
+- quando o próprio end user pode resolver algo simples;
+- quando o caso precisa virar ServiceCase e escalation.
 
 O ThermalOps organiza essas evidências para responder, com rastreabilidade:
 
-> **Qual é o estado desta impressora, o que pode ser tratado localmente com segurança e dentro da policy, e o que precisa ser escalado?**
+> **Qual é o estado desta impressora, o que pode ser tratado localmente com segurança e dentro da policy, o que deve ser apenas orientado, e o que precisa ser escalado?**
 
-O produto foi desenhado para ajudar em todo o ciclo operacional:
+## Ciclo operacional
 
 ```text
 ANTES DA FALHA
-  -> Preventive Inspection / maintenance policy / baseline / checklist
+  -> Preventive Inspection
+  -> MaintenancePolicy / MaintenanceTaskCatalog
+  -> Lifecycle indicators / usage / baseline
+  -> checklist / TechnicianObservation
 
 DURANTE A FALHA
-  -> Quick Diagnosis / Advanced Diagnostics / triage / local remediation
+  -> Quick Diagnosis
+  -> Advanced Diagnostics
+  -> Guided Troubleshooting
+  -> triage / least-impact Local Remediation
 
-QUANDO O ESCOPO DE CAMPO TERMINA
-  -> evidence / ServiceCase / escalation package
+QUANDO O ESCOPO LOCAL TERMINA
+  -> evidence
+  -> ServiceCase
+  -> escalation package
+  -> optional Helpdesk connector
 
-DEPOIS DA AÇÃO
-  -> verify / before-after / report / history
+DEPOIS DA AÇÃO / MANUTENÇÃO
+  -> verify
+  -> before/after
+  -> Return-to-Service checks
+  -> report / history
 
 ENTRE OCORRÊNCIAS (Enterprise)
-  -> fleet / trends / drift / alerts / maintenance by exception
+  -> Fleet
+  -> Health history
+  -> ConditionTrend
+  -> drift / alerts
+  -> maintenance by exception
 ```
 
 ## Pilares do produto
 
 ```text
-                         THERMALOPS
-                              |
-  +------------+--------------+--------------+--------------+
-  |            |              |              |              |
-  v            v              v              v              v
-Diagnosis  Preventive     Local          Support        Observability
-           Maintenance    Remediation    / Evidence     / Fleet
-  |            |              |              |              |
-  +------------+--------------+--------------+--------------+
-                              |
-                    Field Service / Escalation
+                              THERMALOPS
+                                   |
+      +------------+---------------+---------------+-------------+
+      |            |               |               |             |
+      v            v               v               v             v
+ Diagnosis    Preventive        Guided          Support      Observability
+              Maintenance       Operations      / Evidence   / Fleet
+      |            |               |               |             |
+      +------------+---------------+---------------+-------------+
+                                   |
+                         Lifecycle & Health
+                                   |
+                    +--------------+--------------+
+                    |                             |
+                    v                             v
+              Self-Service                 Field Service
+                                           / Escalation
 ```
 
 ### Diagnosis
 
-Combina Windows, transport, vendor-native evidence e observações do técnico sem reduzir tudo a um simples `ONLINE/OFFLINE`.
+Combina Windows, transport, vendor-native evidence e observações humanas sem reduzir tudo a `ONLINE/OFFLINE`.
 
 ### Preventive Maintenance
 
-Usa tarefas com source/applicability, baseline, counters quando disponíveis, configuration drift, histórico e checklist humano. O ThermalOps não inventa intervalos ou vida útil de componentes.
+Usa tasks source-backed, baseline, counters quando suportados, configuration drift, maintenance history e TechnicianObservation. O ThermalOps não inventa intervals, replacement thresholds ou component lifetime.
+
+### Guided Operations
+
+Transforma evidence + capabilities + approved sources em troubleshooting guiado e verificável. Um `Runbook` pode pular passos já comprovados, solicitar verificação manual, recheckar o equipamento e encaminhar para typed actions seguras quando apropriado.
+
+Runbooks são **data**, não scripts. Documentos, AI ou Knowledge Packs nunca podem criar arbitrary executable capability.
+
+### Lifecycle & Health
+
+Separa explicitamente:
+
+```text
+AssetAge
+UsageMetrics
+ComponentCondition
+MaintenanceCompliance
+CurrentHealth
+ConditionTrend
+RemainingLifeEstimate
+```
+
+`CurrentHealth` representa condição observável agora. `RemainingLifeEstimate`/RUL é prediction futura e permanece `Unavailable`/`NotValidated` até existir modelo validado para uma applicability class explícita.
 
 ### Local Remediation
 
-`Repair` dentro do projeto significa remediation local, restrita e autorizada — por exemplo, cancelar um job selecionado ou executar um Spooler restart controlado. Não significa assumir que todo técnico pode desmontar ou reparar internamente a impressora.
+`Repair` no projeto significa remediation local, restrita e autorizada — por exemplo, cancelar um job selecionado ou executar um controlled Spooler restart. Não significa assumir que todo técnico pode desmontar ou fazer bench repair.
 
 ### Support / Evidence
 
-Cada conclusão deve apontar para evidence. Relatórios, support bundles, ServiceCase e escalation package preservam contexto para N1, N2/N3, assistência autorizada ou fabricante.
+Cada Finding e recommendation relevante deve apontar para evidence. Diagnostic Report, Preventive Report, Support Bundle, GuidanceSession summary e ServiceCase preservam contexto para N1/N2/N3, assistência autorizada ou fabricante.
+
+### Self-Service
+
+Self-Service é um `ExperienceProfile`, não uma nova edição. O objetivo é permitir que um end user, em ambiente aprovado pela organização, veja status/Health, rode Quick Diagnosis, siga guided checks e prepare support evidence como standard user.
+
+O objetivo **não** é contornar TI. Em ambientes com WDAC/App Control, AppLocker, EDR, firewall, proxy ou software catalog, ThermalOps deve ser aprovado/distribuído conforme a política da organização e depois operar dentro desse envelope.
 
 ### Observability / Fleet
 
-A edição Enterprise poderá adicionar inventory, maintenance history, condition trends, configuration drift, alerting e maintenance by exception após ADRs específicos de persistência, autenticação e operação distribuída.
+A edição Enterprise poderá adicionar inventory, health/history, maintenance schedules, ConditionTrend, configuration drift, alerting, ServiceCase recurrence e maintenance by exception depois de ADRs específicos de persistence, authentication/RBAC, agent lifecycle e retention.
 
-## Edições
+## Edições e Experience Profiles
 
 | Edição | Uso principal | Persistência | Writes |
 | --- | --- | --- | --- |
-| **Portable Lite** | Field/N1, diagnóstico e preventiva | Nenhuma intencional | Não; read-only por design |
-| **Portable Pro** | N2/N3, field support e remediation controlada | Nenhuma intencional | Somente operações allowlisted e confirmadas |
-| **Enterprise** | Fleet, histórico, policies, schedules e condition monitoring | Gerenciada | Controlado por policy/RBAC |
+| **Portable Lite** | Field/N1/Self-Service read-only, diagnosis e preventive | Nenhuma intencional | Não; read-only por design |
+| **Portable Pro** | Technician/N2/N3, field support e controlled remediation | Nenhuma intencional | Somente operations allowlisted, policy-gated e confirmadas |
+| **Enterprise** | Managed Self-Service, Fleet, history, policies, schedules, integrations | Gerenciada | Controlado por policy/RBAC/capability |
 
-### Portable Lite
+Experience Profiles previstos:
 
-Deve funcionar sem installer, sem .NET previamente instalado, sem login, sem internet obrigatória e sem UAC. Continua útil para Quick Diagnosis, Advanced Diagnostics read-only, Preventive Inspection, baseline comparison, checklist, relatórios e preparação de escalation.
+```text
+SelfService
+Technician
+AdvancedSupport
+```
 
-### Portable Pro
+Eles compartilham o mesmo Domain/diagnostic engine. Muda progressive disclosure e effective capability surface; não existe um “diagnóstico simplificado” que possa contradizer o técnico.
 
-Adiciona local remediation e operações que podem exigir elevação. A UI continua em standard-user e eleva somente um **Temporary Privileged Helper** para a operação allowlisted específica.
+## Portable Lite
 
-### Enterprise
+Deve funcionar sem installer, sem .NET previamente instalado, sem login, sem internet obrigatória e sem UAC. Continua útil para:
 
-Adicionará instalação gerenciada, inventory/history, preventive schedules, baselines, alerting, condition trends e controles corporativos. A arquitetura Enterprise não pode transformar o helper portátil em um serviço privilegiado irrestrito.
+- Quick Diagnosis;
+- Advanced Diagnostics read-only;
+- Guided Troubleshooting read-only;
+- Knowledge Center offline quando pack aprovado existir;
+- Preventive Inspection;
+- Lifecycle/Health summary;
+- baseline comparison;
+- checklist;
+- reports;
+- evidence collection;
+- ServiceCase preparation.
 
-## O que o ThermalOps pretende observar
+## Portable Pro
+
+Adiciona Local Remediation e native diagnostic actions aprovadas. A UI permanece standard-user e eleva somente o **Temporary Privileged Helper** para a operation allowlisted específica que realmente exigir Windows elevation.
+
+Printer-side writes também precisam de typed action, capability resolution, policy, impact preview e verification; não ficam automaticamente seguras só porque não exigem UAC.
+
+## Enterprise
+
+Pode adicionar:
+
+- managed installation;
+- managed Self-Service client;
+- asset/user scope;
+- optional SSO/organization identity;
+- Fleet inventory/history;
+- MaintenanceSchedule/history;
+- HealthAssessment history;
+- baselines/drift;
+- alerting;
+- ServiceDesk connectors;
+- RBAC/audit/retention;
+- optional least-privilege collector/agent.
+
+Enterprise não pode transformar o Temporary Privileged Helper em um serviço irrestrito persistente.
+
+## Evidence sources
 
 ### Windows print path
 
 - Print Spooler state e configuração relevante;
 - installed printers e target queue;
 - jobs e estados de erro/stall;
-- driver identity/version/package evidence;
+- driver identity/version/package;
 - ports e print processors;
 - USB/PnP evidence;
-- Windows Event Log relacionado a impressão;
-- access denied, timeout e coleta indisponível como evidence de primeira classe.
+- Windows Event Log;
+- access denied, timeout, blocked e unavailable como first-class outcomes.
 
 ### Transport
 
-- USB / DOT4;
-- TCP/IP RAW;
-- TLS printer channel quando suportado;
-- LPR;
-- Windows shared printer;
-- Bluetooth;
-- serial / parallel;
-- browser/local bridge;
-- known-endpoint reachability quando a policy autorizar.
+Potential transport model:
 
-ICMP nunca é tratado como prova de printer health.
+```text
+USB / DOT4
+TCP/IP RAW
+TCP/TLS
+LPR
+Windows Share
+Bluetooth
+Serial
+Parallel
+Browser/local bridge
+Unknown
+```
+
+Known-endpoint reachability pode ser verificada quando policy permitir. ICMP nunca é prova de printer health.
 
 ### Vendor-native
 
-No adapter Zebra, usar Link-OS, SGD, ZPL e interfaces suportadas quando apropriado e validado. Potenciais evidências incluem readiness, head state, media/ribbon state, pause, temperatura, firmware, counters/odometer, selected read-only configuration e device-reported warnings/errors.
+No adapter Zebra, Link-OS, SGD, ZPL e outras interfaces suportadas podem fornecer, dependendo de model/firmware/connection:
+
+- readiness;
+- head state;
+- media/ribbon state;
+- pause;
+- thermal warnings;
+- device warnings/errors;
+- firmware;
+- counters/odometer;
+- selected read-only configuration;
+- diagnostic/self-test capabilities.
 
 Windows queue status e physical-device status permanecem fontes distintas.
+
+## Lifecycle, uso e vida útil
+
+O ThermalOps pode coletar `UsageMetrics` quando a printer expõe counters oficialmente suportados. No ecossistema Zebra Link-OS, por exemplo, há APIs de odometer/counters que podem expor métricas como total print length e outros counters em printers compatíveis.
+
+Isso **não** significa que todas as Zebra fornecem `OperatingHours`, `PowerOnHours`, vida útil da cabeça ou porcentagem de vida restante.
+
+Correct representation:
+
+```text
+OperatingHours
+collectionOutcome = Unsupported
+```
+
+em vez de:
+
+```text
+OperatingHours = 0
+```
+
+A vida útil restante só pode aparecer por `RemainingLifeEstimate` quando validada. Até lá, o produto mostra indicators defensáveis: CurrentHealth, Usage, MaintenanceDue, ComponentCondition, ManufacturerWarnings e ConditionTrend.
+
+Detalhes: [Lifecycle e Health](docs/produto/lifecycle-e-health.md).
 
 ## Preventive Maintenance
 
@@ -134,93 +274,163 @@ A preventiva é uma capability de primeira classe:
 Automatic evidence
 + source-backed MaintenancePolicy
 + applicable MaintenanceBaseline
++ UsageMetrics quando suportados
 + TechnicianObservation / checklist
-+ history/counters quando disponíveis
++ history
 = MaintenanceFinding + recommendation + ServiceDisposition
 ```
 
-O sistema deve suportar estados como `Unknown`, `NotDue`, `DueSoon`, `Due`, `Overdue`, `Blocked` e `NotApplicable` sem transformar ausência de informação em “healthy”.
-
-Configuration drift é uma finding, não prova automática de defeito. Um Health Score numérico, se existir, será secundário, deterministic, versioned e totalmente explicável.
+`Unknown` não vira `NotDue`. Configuration drift é Finding, não proof de hardware fault. Numeric Health Score, se existir, é secondary, deterministic, versioned e explainable.
 
 Detalhes: [Preventive Maintenance](docs/produto/manutencao-preventiva.md).
 
-## Field Service e Escalation
+## Guided Troubleshooting e Knowledge Center
 
-O produto não assume que o operador é bench-repair technician. O outcome de uma sessão pode ser representado por `ServiceDisposition`:
-
-```text
-ContinueInService
-ContinueWithObservation
-LocalRemediationAllowed
-EscalateToAuthorizedService
-RemoveFromService        # somente quando a policy permitir
-InsufficientEvidence
-```
-
-A regra exata varia por organização, contrato, fabricante e site. Processos proprietários permanecem fora do public core.
-
-Detalhes: [Field Service, Triage e Escalation](docs/produto/field-service-e-escalation.md).
-
-## Portable workflow
+A Guidance layer resolve runbooks por:
 
 ```text
-Approved USB / local copy
-        |
-        v
-ThermalOps.exe
-        |
-        +--> Quick Diagnosis
-        +--> Preventive Inspection
-        +--> Advanced Diagnostics
-        +--> Analyze Failure
-        +--> Collect Evidence
-        +--> Prepare Escalation
-        |
-        +--> approved local remediation --UAC--> Temporary Privileged Helper
-        |
-        +--> Verify / before-after
-        +--> sanitized report / full bundle / ServiceCase
-        +--> cleanup / no intentional persistence
+Vendor
+Model/family
+Firmware
+Capability
+Transport
+Symptom/topic
+Policy
+Locale
+Source/version
 ```
 
-Requisitos centrais:
+Example:
 
-- self-contained .NET publish;
-- no installer na edição Portable;
-- no dependency setup manual;
-- no account obrigatório;
-- no internet obrigatória;
-- no reboot no fluxo normal;
-- no CLI necessário para uso normal;
-- session staging em `%TEMP%`, nunca automaticamente no USB;
-- `--readonly` como hard guardrail;
-- Customer Safe profile;
-- Authenticode quando houver signing identity de produção.
+```text
+Não imprime
+  -> Windows queue = OK
+  -> transport = OK
+  -> Zebra native status = HeadOpen
+  -> apresentar approved model-aware check
+  -> recheck
+  -> ReadyToPrint=true
+  -> outcome Resolved
+```
+
+Nenhum reset/restart de Windows é executado se evidence já localizou uma condição física simples.
+
+Knowledge pode vir de official links, local approved Knowledge Packs ou future online retrieval. Redistribution de vendor manuals depende de licensing; o repository não assume permissão para copiar PDFs inteiros.
+
+Detalhes: [Guided Operations e Knowledge](docs/produto/guided-operations-e-knowledge.md).
+
+## Native diagnostics e setup
+
+Future Zebra Adapter pode mapear capabilities como configuration report, network report, print-quality report, communication diagnostics, sensor profile e calibration **somente onde a interface/model realmente suportar e depois de validation**.
+
+Uma ação aparecer no painel/manual da printer não significa automaticamente que existe API programática equivalente para todos os models.
+
+Cada action recebe `ActionSafetyClass`:
+
+```text
+Informational
+GuidedManual
+AssistedWrite
+AutomatedLowRisk
+HighImpact
+ForbiddenInProfile
+```
+
+Calibration/test printing são write/state-change operations, mesmo quando não exigem administrator rights no Windows.
+
+## Commissioning e Return-to-Service
+
+Guided Operations prevê workflows futuros para:
+
+```text
+Commission new printer
+  -> identify
+  -> driver/queue/transport checks
+  -> approved config/baseline
+  -> calibration/test
+  -> validate
+  -> commissioning snapshot
+
+Return from service
+  -> re-identify physical device
+  -> compare firmware/config/identity
+  -> validate print path
+  -> approved self-tests
+  -> report differences
+  -> ReturnToServiceReport
+```
+
+Nenhum baseline é automaticamente escrito de volta sem explicit plan/policy/verification.
+
+## Self-Service
+
+Self-Service default:
+
+```text
+Allowed:
+Status
+Quick Diagnosis
+Health summary
+Guided Troubleshooting
+Knowledge Center
+Preventive status
+Sanitized evidence/report
+ServiceCase draft
+
+Denied by default:
+Spooler restart
+Driver install
+Firmware update
+Factory/network reset
+Arbitrary config write
+Advanced privileged actions
+```
+
+Em empresas com managed software distribution, ThermalOps pode ser aprovado uma vez e disponibilizado para standard users. Isso reduz fricção sem virar bypass de segurança.
+
+Detalhes: [Self-Service / End-User Experience](docs/produto/self-service.md).
+
+## ServiceCase e Helpdesk
+
+Quando guidance não resolve:
+
+```text
+Diagnosis
+ -> GuidanceSession
+ -> NotResolved / EscalationRecommended
+ -> sanitized ServiceCase draft
+ -> privacy preview
+ -> export or optional configured Helpdesk connector
+```
+
+Future connectors podem integrar com ServiceNow, Jira Service Management, Movidesk, Freshservice, Zendesk ou private organization APIs, mas o public core usa `IServiceDeskConnector` e não hard-code de URL, ticket schema, SLA, credentials ou employer rules.
 
 ## Segurança
 
-ThermalOps é safety-sensitive support software. Alguns princípios são não negociáveis:
+ThermalOps é safety-sensitive support software. Guardrails centrais:
 
-- read-only por padrão;
+- read-only by default;
 - least privilege;
-- no arbitrary PowerShell/cmd/shell endpoint;
-- no broad spool-folder deletion para resolver um job específico;
+- Self-Service standard-user-first;
+- no arbitrary PowerShell/cmd/shell;
+- no executable runbook scripts;
+- no broad spool-folder deletion para selected job;
 - no automatic broad network scan;
 - no automatic customer-data upload;
-- imported policy/baseline é untrusted data;
-- policy pode reduzir capability, nunca criar capability ausente do build;
-- AI não autoriza nem executa repair, maintenance due ou disposition;
-- ações com write seguem `Preflight -> Snapshot -> Execute -> Verify -> Recovery/Rollback -> Post-condition`;
-- Portable não deixa serviço, scheduled task, startup entry, daemon/helper persistente ou log oculto após um clean exit.
+- imported policy/baseline/knowledge pack é untrusted data;
+- policy pode reduzir capability, nunca criar capability ausente;
+- AI não autoriza action, maintenance due, ServiceDisposition ou RUL;
+- writes seguem typed lifecycle + verification;
+- Portable no intentional persistence;
+- corporate controls são respeitados, nunca bypassados.
 
-Veja [Security e Privacy](docs/seguranca/security-e-privacy.md).
+Veja [Security e Privacy](docs/seguranca/security-e-privacy.md) e o [Threat Model de Self-Service/Guided Operations](docs/seguranca/self-service-e-guided-operations-threat-model.md).
 
-## Idioma, localização e terminologia
+## Idioma e terminologia
 
-O repositório e a documentação de produto são **pt-BR por padrão**, mas os termos técnicos que pertencem ao ecossistema, Domain ou APIs permanecem em inglês quando isso melhora precisão e manutenção.
+Documentation e user-facing product são pt-BR-first, localization-ready. Código, schemas, Domain types, APIs e consolidated technical terms permanecem em inglês quando isso mantém precisão.
 
-Exemplos mantidos em inglês:
+Examples:
 
 ```text
 Domain
@@ -233,12 +443,14 @@ ServiceCase
 ServiceDisposition
 RepairPlan
 HealthAssessment
+GuidanceSession
+Runbook
+ExperienceProfile
 Quick Diagnosis
 Preventive Inspection
 Spooler
 WinSpool
 PnP
-Event Log
 Link-OS
 SGD
 ZPL
@@ -247,25 +459,23 @@ SBOM
 RBAC
 ```
 
-O código C#, nomes de classes/métodos/interfaces, schemas e contracts internos permanecem em inglês. A UI será localization-ready, com `pt-BR` como locale inicial de referência e possibilidade futura de `en-US`, `es` e outros locales sem duplicar business logic.
-
-Detalhes: [Localização e Terminologia](docs/produto/localizacao-e-terminologia.md).
-
 ## Stack e arquitetura
 
-Decisão inicial:
+Initial direction:
 
 - C#;
 - .NET 10 LTS;
-- WPF para o primeiro Windows client;
+- WPF;
 - modular monolith;
 - Domain/Application independentes de UI, Windows implementation, vendor SDK e AI;
-- Windows Infrastructure usando APIs suportadas;
-- vendor adapters separados;
-- Temporary Privileged Helper com IPC estreito e tipado;
-- self-contained publishing para Portable.
+- Windows Infrastructure com supported APIs;
+- Vendor Adapters separados;
+- Temporary Privileged Helper com IPC estrito;
+- self-contained publishing para Portable;
+- data-only Knowledge Packs;
+- ExperienceProfile não usado como standalone authorization.
 
-Veja [Arquitetura](docs/engenharia/arquitetura.md) e os [ADRs](docs/adr/).
+Veja [Arquitetura](docs/engenharia/arquitetura.md), [Guided Operations Architecture](docs/engenharia/guided-operations-architecture.md) e [ADRs](docs/adr/).
 
 ## Estrutura da documentação
 
@@ -276,19 +486,25 @@ docs/
 │   ├── visao-do-produto.md
 │   ├── portable.md
 │   ├── manutencao-preventiva.md
+│   ├── lifecycle-e-health.md
+│   ├── guided-operations-e-knowledge.md
+│   ├── self-service.md
 │   ├── field-service-e-escalation.md
 │   ├── fleet-e-condition-monitoring.md
 │   ├── ai-e-knowledge-assistance.md
 │   └── localizacao-e-terminologia.md
 ├── engenharia/
 │   ├── arquitetura.md
+│   ├── guided-operations-architecture.md
+│   ├── validation-matrix-lifecycle-guidance-self-service.md
 │   ├── diagnostico-e-remediacao-local.md
 │   ├── deployment-e-lifecycle.md
 │   ├── support-bundles-e-service-cases.md
 │   ├── testing.md
 │   └── release-engineering.md
 ├── seguranca/
-│   └── security-e-privacy.md
+│   ├── security-e-privacy.md
+│   └── self-service-e-guided-operations-threat-model.md
 ├── pesquisa/
 │   └── referencias-e-padroes.md
 ├── planejamento/
@@ -297,29 +513,27 @@ docs/
 └── assets/
 ```
 
-A separação é deliberada: produto, engineering, security, research e planning não ficam misturados no mesmo nível.
-
 ## Roadmap
 
 | Milestone | Resultado principal |
 | --- | --- |
-| **M0** | Product, security, preventive e field-service foundations |
-| **M1** | Read-only Windows Diagnosis foundation |
+| **M0** | Product/security/preventive/field-service/lifecycle/guidance/self-service foundations |
+| **M1** | Read-only Windows Diagnosis + guidance primitives |
 | **M2** | Safe Local Remediation |
-| **M3** | Zebra native adapter |
-| **M4** | Support + Preventive Suite |
-| **M5** | Enterprise hardening + deployment lifecycle |
-| **M6** | Fleet + Condition Monitoring |
+| **M3** | Zebra native evidence/capability adapter |
+| **M4** | Support + Preventive + Guided Operations suite |
+| **M5** | Enterprise hardening + managed Self-Service/deployment integrations |
+| **M6** | Fleet + Condition Monitoring + Health history |
 | **M7** | Multi-vendor adapters |
 | **M8** | Knowledge / AI assistance |
-| **M9** | Predictive-maintenance research, não uma feature prometida |
+| **M9** | Predictive-maintenance/RUL research, não promised feature |
 
 Veja o [Roadmap completo](docs/planejamento/roadmap.md).
 
 ## Engineering Constitution
 
-Toda implementação deve seguir [ENGINEERING_CONSTITUTION.md](ENGINEERING_CONSTITUTION.md). Ela define prioridade de business correctness, safety/security, privacy/authorization, reliability, maintainability, testing, observability, UX, supply chain e honest status.
+Toda implementação segue [ENGINEERING_CONSTITUTION.md](ENGINEERING_CONSTITUTION.md). A Constitution define business/domain correctness, safety/security, authorization/privacy, reliability, maintainability, testing, observability, UX/accessibility, supply chain, documentation governance e honest status.
 
 ## Licença
 
-A licença do projeto **ainda não foi selecionada**. Código-fonte publicamente visível não é automaticamente reutilizável. Até a decisão formal, não copie implementação de terceiros sem revisão explícita de licença, atribuição, manutenção e segurança.
+A licença do projeto ainda não foi selecionada. Source publicamente visível não é automaticamente reusable. Não copiar third-party implementation nem redistribuir vendor documentation/SDK sem license/redistribution review explícita.

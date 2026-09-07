@@ -18,24 +18,35 @@ REQUIRED_FILES = [
     "docs/produto/visao-do-produto.md",
     "docs/produto/portable.md",
     "docs/produto/manutencao-preventiva.md",
+    "docs/produto/lifecycle-e-health.md",
+    "docs/produto/guided-operations-e-knowledge.md",
+    "docs/produto/self-service.md",
     "docs/produto/field-service-e-escalation.md",
     "docs/produto/fleet-e-condition-monitoring.md",
     "docs/produto/ai-e-knowledge-assistance.md",
     "docs/produto/localizacao-e-terminologia.md",
     "docs/engenharia/arquitetura.md",
+    "docs/engenharia/guided-operations-architecture.md",
+    "docs/engenharia/validation-matrix-lifecycle-guidance-self-service.md",
     "docs/engenharia/diagnostico-e-remediacao-local.md",
     "docs/engenharia/deployment-e-lifecycle.md",
     "docs/engenharia/support-bundles-e-service-cases.md",
     "docs/engenharia/testing.md",
     "docs/engenharia/release-engineering.md",
     "docs/seguranca/security-e-privacy.md",
+    "docs/seguranca/self-service-e-guided-operations-threat-model.md",
     "docs/pesquisa/referencias-e-padroes.md",
+    "docs/pesquisa/zebra-guidance-self-service-2026.md",
     "docs/planejamento/roadmap.md",
+    "docs/planejamento/auditoria-m0-lifecycle-guidance-self-service.md",
     "docs/adr/0001-stack-and-desktop-ui.md",
     "docs/adr/0002-privileged-helper.md",
     "docs/adr/0003-field-service-and-preventive-scope.md",
     "docs/adr/0004-maintenance-and-health-model.md",
     "docs/adr/0005-localization-and-technical-language.md",
+    "docs/adr/0006-guided-operations-and-knowledge.md",
+    "docs/adr/0007-self-service-experience-and-policy.md",
+    "docs/adr/0008-lifecycle-health-and-rul-semantics.md",
     "docs/assets/thermalops-concept-overview.png",
 ]
 
@@ -72,7 +83,6 @@ LEGACY_PATHS = [
 ]
 
 ALLOWED_DOCS_ROOT_MARKDOWN = {"README.md"}
-
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
 
@@ -151,6 +161,17 @@ def validate_markdown_links(errors: list[str]) -> None:
                 errors.append(f"{relative}: broken internal link: {target}")
 
 
+def require_terms(path: str, terms: list[str], errors: list[str]) -> None:
+    file = ROOT / path
+    if not file.is_file():
+        return
+
+    text = file.read_text(encoding="utf-8")
+    for term in terms:
+        if term not in text:
+            errors.append(f"{path}: missing required contract term: {term}")
+
+
 def validate_root_readme(errors: list[str]) -> None:
     readme = ROOT / "README.md"
     if not readme.is_file():
@@ -161,29 +182,159 @@ def validate_root_readme(errors: list[str]) -> None:
     if expected_image not in text:
         errors.append("README.md: conceptual product image is not referenced")
 
-    if "Imagem conceitual" not in text:
-        errors.append("README.md: conceptual image disclaimer is missing")
+    for required in [
+        "Imagem conceitual",
+        "Guided Operations",
+        "Lifecycle & Health",
+        "Self-Service",
+        "RemainingLifeEstimate",
+    ]:
+        if required not in text:
+            errors.append(f"README.md: missing product direction term: {required}")
 
 
 def validate_language_contract(errors: list[str]) -> None:
-    localization = ROOT / "docs/produto/localizacao-e-terminologia.md"
-    constitution = ROOT / "ENGINEERING_CONSTITUTION.md"
+    require_terms(
+        "docs/produto/localizacao-e-terminologia.md",
+        ["pt-BR", "MaintenanceInspection", "ServiceDisposition", "schema"],
+        errors,
+    )
 
-    if localization.is_file():
-        text = localization.read_text(encoding="utf-8")
-        required_terms = ["pt-BR", "MaintenanceInspection", "ServiceDisposition", "schema"]
-        for term in required_terms:
-            if term not in text:
-                errors.append(
-                    f"docs/produto/localizacao-e-terminologia.md: missing language-contract term: {term}"
-                )
+    require_terms(
+        "ENGINEERING_CONSTITUTION.md",
+        ["Documentation governance", "Localization", "Least privilege"],
+        errors,
+    )
 
-    if constitution.is_file():
-        text = constitution.read_text(encoding="utf-8")
-        if "Documentation governance" not in text:
-            errors.append("ENGINEERING_CONSTITUTION.md: documentation governance section missing")
-        if "Localization" not in text:
-            errors.append("ENGINEERING_CONSTITUTION.md: localization rule missing")
+
+def validate_guidance_contract(errors: list[str]) -> None:
+    require_terms(
+        "docs/produto/guided-operations-e-knowledge.md",
+        [
+            "Runbook",
+            "GuidanceSession",
+            "ActionSafetyClass",
+            "Knowledge Pack",
+            "GuidedManual",
+            "AssistedWrite",
+            "HighImpact",
+        ],
+        errors,
+    )
+
+    require_terms(
+        "docs/engenharia/guided-operations-architecture.md",
+        [
+            "ExperienceProfile",
+            "IRunbookRepository",
+            "IServiceDeskConnector",
+            "ActionReference",
+            "data-only",
+        ],
+        errors,
+    )
+
+    require_terms(
+        "docs/adr/0006-guided-operations-and-knowledge.md",
+        ["Accepted", "Runbook", "ActionSafetyClass", "AI"],
+        errors,
+    )
+
+
+def validate_self_service_contract(errors: list[str]) -> None:
+    require_terms(
+        "docs/produto/self-service.md",
+        [
+            "ExperienceProfile",
+            "standard-user",
+            "BlockedByPolicy",
+            "AssignedAssetScope",
+            "IServiceDeskConnector",
+            "não é",
+        ],
+        errors,
+    )
+
+    require_terms(
+        "docs/adr/0007-self-service-experience-and-policy.md",
+        ["ExperienceProfile", "Effective capability", "Self-Service defaults"],
+        errors,
+    )
+
+
+def validate_lifecycle_contract(errors: list[str]) -> None:
+    require_terms(
+        "docs/produto/lifecycle-e-health.md",
+        [
+            "AssetAge",
+            "UsageMetrics",
+            "ComponentCondition",
+            "HealthAssessment",
+            "RemainingLifeEstimate",
+            "Unsupported",
+            "Unknown",
+        ],
+        errors,
+    )
+
+    require_terms(
+        "docs/adr/0008-lifecycle-health-and-rul-semantics.md",
+        ["RemainingLifeEstimate", "NotValidated", "Numeric Health Score"],
+        errors,
+    )
+
+
+def validate_security_and_audit(errors: list[str]) -> None:
+    require_terms(
+        "docs/seguranca/self-service-e-guided-operations-threat-model.md",
+        [
+            "Runbook as code execution",
+            "Self-Service privilege expansion",
+            "Helpdesk connector data exfiltration",
+            "Unsupported lifetime / RUL claim",
+        ],
+        errors,
+    )
+
+    require_terms(
+        "docs/planejamento/auditoria-m0-lifecycle-guidance-self-service.md",
+        [
+            "Engineering Constitution compliance",
+            "Remaining open items",
+            "Guided Troubleshooting",
+            "Self-Service",
+            "RUL",
+        ],
+        errors,
+    )
+
+
+def validate_validation_matrix(errors: list[str]) -> None:
+    require_terms(
+        "docs/engenharia/validation-matrix-lifecycle-guidance-self-service.md",
+        [
+            "RUL",
+            "Runbook Safety",
+            "Self-Service Capability Matrix",
+            "Corporate Endpoint Controls",
+            "Helpdesk Connector",
+            "Definition of Done",
+        ],
+        errors,
+    )
+
+
+def validate_research_index(errors: list[str]) -> None:
+    require_terms(
+        "docs/README.md",
+        ["zebra-guidance-self-service-2026.md"],
+        errors,
+    )
+    require_terms(
+        "docs/pesquisa/zebra-guidance-self-service-2026.md",
+        ["Nucleus Connector", "SettingsProvider", "Company Portal", "AppLocker"],
+        errors,
+    )
 
 
 def main() -> int:
@@ -196,6 +347,12 @@ def main() -> int:
     validate_markdown_links(errors)
     validate_root_readme(errors)
     validate_language_contract(errors)
+    validate_guidance_contract(errors)
+    validate_self_service_contract(errors)
+    validate_lifecycle_contract(errors)
+    validate_security_and_audit(errors)
+    validate_validation_matrix(errors)
+    validate_research_index(errors)
 
     if errors:
         print("Repository documentation validation failed:")
