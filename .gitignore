@@ -1,0 +1,35 @@
+# .NET
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE
+.vs/
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ThermalOps runtime/session outputs
+ThermalOps-SupportBundle-*.zip
+ThermalOps-Report-*.json
+ThermalOps-Report-*.txt
+*.diagnostic.log
+
+# Signing/secrets
+*.pfx
+*.p12
+*.snk
+*.key
+*.pem
+.env
+.env.*
+!.env.example
