@@ -1,191 +1,197 @@
 # Portable Editions
 
-Portable operation is a core product requirement.
+Portable operation is a core product requirement for diagnosis, preventive inspection, triage, evidence collection and controlled field remediation.
 
 ## Goals
 
 A technician should be able to:
 
-1. receive an approved/signed ThermalOps artifact;
-2. execute it on an authorized customer Windows endpoint;
-3. diagnose without installation;
-4. elevate only an explicitly chosen repair action when using Portable Pro;
-5. export only the intended report/bundle;
-6. exit;
-7. leave no intentional persistent component.
+1. receive an approved/signed artifact;
+2. run it on an authorized supported Windows endpoint;
+3. diagnose and perform preventive inspection without installation;
+4. stay read-only unless a Pro action is explicitly chosen;
+5. collect/prepare an escalation case without being forced to repair;
+6. export only intended data;
+7. exit and leave no intentional persistent component.
+
+## Portable Lite
+
+Permanently read-only. Intended for N1/field/preventive use.
+
+Includes, as milestones mature:
+
+- Quick Diagnosis;
+- Advanced read-only diagnostics;
+- Preventive Inspection;
+- technician checklist;
+- source-backed maintenance due calculation;
+- baseline comparison/import/export;
+- service disposition and escalation preparation;
+- sanitized reporting.
+
+No helper/UAC/write path exists.
+
+## Portable Pro
+
+Everything in Lite plus policy-authorized local remediation, diagnostic print and full service/support bundles. UAC is requested only for a specific action that truly requires elevation.
 
 ## Packaging
-
-Primary target:
 
 ```text
 ThermalOps-Portable-<version>-win-x64.zip
 ├── ThermalOps.exe
 ├── checksums.sha256
 ├── SBOM.spdx.json
+├── release-notes.md
 ├── README.txt
 └── SECURITY.txt
 ```
 
-If signing/provenance produces separate metadata, include it without making runtime execution depend on the presence of the metadata files.
-
-Daily technician use may expose only the signed executable through an approved internal software channel, while security teams retain the full release package.
+Single-file is desirable but not mandatory if it harms vendor-native SDK compatibility, signing, helper verification, reliability, endpoint-security compatibility or troubleshooting.
 
 ## Runtime
 
-Use .NET self-contained publishing so the target does not require a preinstalled .NET runtime.
+Self-contained .NET publish. Target machine should not require a preinstalled .NET runtime.
 
-Initial architecture targets:
-
-- `win-x64` — primary;
-- `win-arm64` — supported when test coverage exists;
-- `win-x86` — only if a real customer/support requirement justifies it.
-
-Single-file publishing is desirable, but not at the expense of runtime reliability, signing, native vendor SDK compatibility, startup time, or forensic clarity. If a small signed multi-file directory is safer, document the trade-off in an ADR.
+- `win-x64` primary;
+- `win-arm64` after real testing;
+- `win-x86` only if a demonstrated requirement exists.
 
 ## Session storage
 
-Do **not** automatically write collected customer data to removable media.
-
-Default session root:
+Do not automatically write customer data to removable media.
 
 ```text
 %TEMP%\ThermalOps\Sessions\<session-id>\
 ```
 
-Session content may include normalized evidence, temporary logs, snapshots, and bundle staging.
+Session staging may contain normalized evidence, snapshots, checklist state, logs and bundle staging.
 
 At close:
 
-- allow explicit export;
-- attempt secure application-level cleanup of ThermalOps-created temporary files;
-- stop/close helper and IPC;
-- report cleanup failures;
-- do not promise forensic secure erase on filesystems where the application cannot guarantee it.
+- explicit export choices;
+- close helper/IPC;
+- remove ThermalOps-created temporary session files where possible;
+- report cleanup failure;
+- do not promise forensic secure erase.
 
 ## Read-only mode
 
 `ThermalOps.exe --readonly`
 
-Properties:
+Enforced at application/domain capability level.
 
-- no helper launch;
-- no UAC;
-- no job cancellation;
-- no service control;
-- no filesystem-based queue repair;
-- no printer configuration write;
-- no ZPL/SGD write;
-- no diagnostic print;
-- no driver install/remove;
-- no firmware action.
+Impossible actions include:
 
-This is enforced in application/domain policy, not only by disabling buttons.
+- helper launch/UAC;
+- job cancellation;
+- service control;
+- queue reset;
+- printer setting write;
+- arbitrary ZPL/SGD write;
+- diagnostic print;
+- driver install/remove;
+- firmware action.
 
-## Customer Safe mode
+Preventive inspection, evidence collection and escalation-package preparation should remain useful.
 
-Customer Safe is a stricter operational profile suitable for environments where even harmless discovery is sensitive.
+## Customer Safe
 
 Defaults:
 
 - read-only;
-- no telemetry;
-- no upload;
+- no telemetry/upload;
 - no automatic network scanning;
-- no printer writes;
-- no test print;
-- local evidence only unless operator explicitly enables an allowed check.
+- no printer/system writes;
+- no diagnostic print;
+- local evidence first.
 
-Portable Lite can use Customer Safe semantics permanently.
+## Baselines and previous inspections
 
-## UAC and privileged helper
+Portable does not keep hidden customer history. The operator may explicitly import/export a sanitized baseline or previous-inspection artifact when policy permits.
 
-Portable Pro remains standard-user until a confirmed repair requires elevation.
+Imported policy/baseline data can constrain or inform the workflow but can never unlock code capabilities absent from the executable.
+
+## Privileged helper
 
 ```text
 ThermalOps.exe (standard user)
         |
-        | signed structured request
+        | confirmed typed request
         v
-ThermalOps.PrivilegedHelper.exe (temporary elevated process)
+Temporary Elevated Helper
         |
-        +-- allowlisted Windows operation
-        |
+        +-- one allowlisted operation
         v
-validate post-condition -> helper terminates
+validate post-condition -> helper exits
 ```
 
-The helper must not expose a terminal, script engine, arbitrary executable launch, generic registry write, or generic file delete endpoint.
+No shell, script engine, arbitrary executable launch, generic registry write, arbitrary file delete, or general service-control endpoint.
 
-## Enterprise endpoint security
+## Endpoint controls
 
-Assume customer endpoints may use:
+Assume Defender, EDR/XDR, AppLocker, WDAC, removable-media restrictions, Controlled Folder Access and privilege-management products.
 
-- Microsoft Defender;
-- EDR/XDR;
-- AppLocker;
-- WDAC;
-- removable-media controls;
-- application allowlisting;
-- Controlled Folder Access;
-- privilege-management products.
+ThermalOps cooperates with these controls. It never bypasses them.
 
-ThermalOps must **cooperate** with these controls, not attempt to bypass them.
-
-Release identity should support publisher-based allowlisting when organizations choose to approve the tool:
+Production release metadata should support security review and publisher allowlisting:
 
 ```text
-Product: ThermalOps Portable
-Version: 1.x.y
-Publisher: <future signing identity>
-Signature: valid Authenticode
-Commit: <sha>
-Build: <build-id>
-SHA-256: <artifact hash>
+Product / edition
+Version
+Publisher
+Authenticode status
+Commit SHA
+Build ID
+Architecture
+SHA-256
+SBOM
+Known network/persistence behavior
 ```
 
 ## Offline behavior
 
-Core features must continue with:
-
-```text
-Internet: unavailable
-Cloud/API: unavailable
-Account/login: unavailable
-```
-
-Required offline capabilities:
+Core functions remain available without internet/cloud/login:
 
 - Windows diagnosis;
 - local printer discovery;
-- supported vendor-local status;
-- policy-permitted repair;
-- logs/session timeline;
-- report generation.
+- vendor-local status where supported;
+- preventive inspection;
+- baseline comparison from local approved file;
+- local policy-permitted remediation;
+- timeline/report/service-case generation.
 
-Optional AI/cloud explanation must fail closed to deterministic diagnosis, never block support.
+Optional cloud/AI fails closed to deterministic functionality.
 
-## No-persistence verification
+## Portable UX target
 
-Portable E2E tests should verify, before vs after clean exit:
+Normal usage should not require an installer, CLI, dependency setup or reboot.
 
-- no ThermalOps service installed;
-- no scheduled task created;
-- no Run/Startup entry created;
-- no helper process remains;
-- no named pipe remains open;
-- no expected temporary session directory remains after successful cleanup;
-- no new application-managed registry persistence;
-- no log file left in the executable directory or removable media unless explicitly exported.
+A future measured target may be less than 60 seconds from launch to beginning first diagnosis on a supported normal endpoint. Do not advertise it until benchmarked.
+
+## No-persistence E2E verification
+
+Before/after clean exit verify:
+
+- no ThermalOps service;
+- no scheduled task;
+- no startup/Run entry;
+- no helper process;
+- no open IPC endpoint;
+- no unexpected session directory;
+- no app-managed persistent registry state;
+- no log beside executable/USB unless explicitly exported.
 
 ## Export choices
 
-At session end:
-
 ```text
 [Discard session]
-[Export sanitized report]
-[Export full technical support bundle]
+[Export sanitized diagnostic report]
+[Export preventive report]
+[Export full technical bundle]
+[Export service-case/escalation package]
 ```
 
-Full bundle must show a concise warning that it may contain environment identifiers and is intended for authorized support handling.
+Full/identity-bearing exports require an explicit privacy warning.
+
+See `DEPLOYMENT_AND_LIFECYCLE.md` for enterprise installation/upgrade/uninstall requirements.

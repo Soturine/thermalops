@@ -1,89 +1,111 @@
 # Release Engineering
 
-## Versioning
+## Versioning and status
 
-Use Semantic Versioning once distributable builds begin.
+Use Semantic Versioning once distributable builds begin. `dev`, `preview`, and `stable` represent validation channels, not marketing labels.
 
-Before 1.0, minor versions may introduce capability while patch versions remain backward-compatible fixes within the documented experimental surface.
+Never call an unsigned/unvalidated artifact stable because it downloads successfully.
 
-## Channels
-
-Potential channels:
-
-- `dev` — CI artifacts, not for customer use;
-- `preview` — signed/controlled evaluation once signing exists;
-- `stable` — release gates complete.
-
-Do not call an unsigned/unvalidated artifact stable merely because it is downloadable.
-
-## Release artifacts
-
-Portable example:
+## Portable artifacts
 
 ```text
-ThermalOps-Portable-0.3.0-win-x64.zip
-ThermalOps-Portable-0.3.0-win-arm64.zip
+ThermalOps-Portable-<version>-win-x64.zip
+ThermalOps-Portable-<version>-win-arm64.zip
 checksums.sha256
 SBOM.spdx.json
 release-notes.md
 ```
 
-Installed/enterprise packaging (MSI/MSIX or another strategy) requires an ADR when that milestone begins.
+Single-file is optional. Reliability, signing and vendor-native dependency correctness outrank cosmetic packaging.
+
+## Enterprise package
+
+Packaging technology remains an ADR decision. It must support the lifecycle contract in `DEPLOYMENT_AND_LIFECYCLE.md`:
+
+- interactive/silent install;
+- silent uninstall;
+- offline deployment;
+- upgrade/migration;
+- rollback/recovery;
+- predictable exit codes/logs;
+- clean uninstall;
+- normal-path no-reboot goal.
 
 ## Build identity
 
-Application/About and support bundle should expose:
+Expose:
 
 - semantic version;
 - commit SHA;
-- build ID/run ID;
-- build timestamp when reproducibility policy allows;
-- target RID/architecture;
-- edition/mode.
+- CI/build ID;
+- build timestamp when policy allows;
+- RID/architecture;
+- edition;
+- capability/schema versions where useful.
+
+Support bundles/service cases also record applicable policy/baseline/schema versions.
 
 ## CI gates
 
 As implementation arrives:
 
-1. formatting/lint;
-2. build;
-3. unit tests;
-4. component tests;
-5. Windows integration tests appropriate for standard runners;
-6. static/security analysis;
-7. dependency/license checks;
-8. packaging smoke tests;
-9. artifact integrity checks;
-10. release-only signing/SBOM/provenance gates.
-
-Hardware-in-the-loop may run on a dedicated protected runner and can be a required gate for releases that claim vendor-native hardware support.
+1. documentation validation;
+2. formatting/lint;
+3. build;
+4. unit tests;
+5. component/contract tests;
+6. Windows integration tests;
+7. preventive policy/baseline/schema tests;
+8. security/static analysis;
+9. dependency/license checks;
+10. packaging/lifecycle smoke tests;
+11. artifact integrity;
+12. release-only signing/SBOM/provenance;
+13. hardware-in-the-loop gate for claimed vendor-native capabilities.
 
 ## Signing
 
-Use Authenticode for Windows binaries when a signing certificate/service is available. Protect signing credentials in an approved CI secret/signing service; never store private keys in the repository.
+Use Authenticode when a production signing identity/service is available. Never store private signing keys in the repository. Verify signature after final signing/packaging.
 
-Verify signature after packaging and before publishing.
+## Checksums/SBOM
 
-## Checksums
+Generate SHA-256 for final distributed bytes. Produce an SBOM covering first-party and dependencies. SPDX JSON remains the preferred starting format unless an ADR changes it.
 
-Generate SHA-256 for final distributed bytes after signing/packaging. The checksum file itself should be included in the release metadata and may be signed/attested depending on the release system.
+## Provenance/reproducibility
 
-## SBOM
+Aim for deterministic builds where practical. Do not claim byte-for-byte reproducibility until verified; signing timestamps/native packaging can alter bytes.
 
-Generate an SBOM for production distributions covering first-party components and dependencies. SPDX JSON is the initial preferred interchange format unless tooling constraints justify CycloneDX via ADR.
-
-## Reproducibility
-
-Aim for deterministic builds where practical, but do not claim byte-for-byte reproducibility until verified. Signing timestamps and native packaging can affect bytes.
-
-## Release rule
+## Release sequence
 
 ```text
-CI green SHA -> release build -> security/package verification -> tag/release
+known-green source SHA
+ -> release build
+ -> tests/security/package validation
+ -> sign
+ -> verify signature
+ -> checksums/SBOM/provenance
+ -> publish
+ -> tag/release points to validated source
 ```
-
-Tag must identify the validated source SHA. Never tag first and hope CI becomes green later.
 
 ## Enterprise allowlisting
 
-Stable publisher identity is more useful to enterprise application-control teams than an ever-changing unsigned executable. Release notes should include publisher, hashes, supported OS/architecture, and known behavior that endpoint security teams can review.
+Release documentation should give endpoint teams publisher, hashes, supported OS/architecture, required privileges, expected persistence/network behavior, update behavior and known limitations.
+
+## Upgrade/uninstall gates
+
+Before Enterprise stable:
+
+- clean install test;
+- silent install/uninstall;
+- N-1 -> N upgrade;
+- policy/baseline/history preservation;
+- failed migration recovery;
+- uninstall cleanup;
+- offline install;
+- blocked-by-policy behavior;
+- no-reboot normal path validation.
+
+## Update policy
+
+No silent self-updater in early releases. A future updater requires signed manifests, signature verification, enterprise deferral, offline mirrors, proxy behavior, rollback/downgrade policy and compromised-key response.

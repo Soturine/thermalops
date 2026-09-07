@@ -2,254 +2,302 @@
 
 ## Mission
 
-ThermalOps reduces time-to-diagnosis and risk during support of Windows-connected thermal printers by combining Windows print-subsystem evidence, transport evidence, vendor-native printer evidence, safe remediation plans, and support-quality reporting.
+ThermalOps reduces downtime, support ambiguity, and operational risk around Windows-connected thermal printers by combining:
 
-The product complements existing ERP/WMS/label-design/print-management ecosystems; it is not intended to replace them.
+- Windows print-subsystem evidence;
+- transport evidence;
+- vendor-native evidence;
+- preventive inspection and maintenance policy;
+- technician observations;
+- safe local remediation;
+- support/escalation packaging;
+- future fleet/condition monitoring.
+
+The product complements ERP/WMS, label-design/printing software, vendor management suites, and authorized repair organizations. It does not replace them.
+
+## Primary jobs-to-be-done
+
+### Before a failure
+
+- run a preventive inspection;
+- collect firmware/counters/configuration where supported;
+- compare with an approved baseline;
+- detect maintenance due/drift/recurring warnings;
+- guide a technician checklist;
+- produce a preventive report.
+
+### During an incident
+
+- identify whether the fault is Windows, queue/job, transport, device-native, configuration, or insufficient evidence;
+- recommend the least-impact next step;
+- perform only policy-authorized local remediation;
+- verify the result.
+
+### When local scope ends
+
+- record findings/actions;
+- determine/record service disposition;
+- generate a service-case/escalation package;
+- preserve evidence for N2/N3 or authorized vendor/service workflows.
+
+### Across a fleet
+
+- inventory devices;
+- monitor health components/trends;
+- track maintenance due;
+- detect configuration drift;
+- surface recurring failures;
+- alert by exception.
 
 ## Personas
 
 ### Field / N1 technician
-Needs a fast, safe answer with minimal choices.
 
-Primary workflow:
+Needs fast, safe, low-friction workflows and clear next actions. May perform preventive inspection, diagnosis, evidence collection, simple policy-authorized field actions, and escalation.
 
-1. start approved Portable Lite/Pro;
-2. run Quick Diagnosis;
-3. select target thermal printer;
-4. see evidence-backed conclusion;
-5. perform only an authorized low-risk action or escalate;
-6. export a sanitized report.
+### N2/N3 analyst
 
-### N2/N3 support analyst
-Needs raw evidence, protocol-level status, configuration comparison, job details, events, and controlled repair plans.
+Needs raw evidence, correlation, logs/events, configuration diff, native protocol status, before/after views, service-case details, and tightly controlled remediation.
 
-### Enterprise operator
-Needs fleet inventory, history, policy enforcement, alerting, and centralized operational visibility without weakening endpoint security.
+### Preventive-maintenance technician
 
-### Customer security/IT
-Needs predictable behavior, publisher signing, no hidden persistence, no automatic upload, no arbitrary network scan, and a clear list of privileged capabilities.
+Needs a repeatable inspection workflow that separates automatic evidence from physical/manual checks and produces sourced maintenance recommendations.
+
+### Enterprise/fleet operator
+
+Needs inventory, history, baselines, maintenance scheduling, condition trends, alerts, policy enforcement and auditability.
+
+### Customer security / IT
+
+Needs predictable execution, code signing, no hidden persistence, no automatic upload, no automatic broad network scan, and an exact privileged capability list.
+
+### Authorized service / vendor support recipient
+
+Needs a structured case with model/device identity where allowed, firmware, status, configuration, counters, relevant Windows/transport evidence, actions attempted, technician observations and disposition.
 
 ## Editions
 
 ### Portable Lite
 
-- single/self-contained Windows artifact or signed package;
-- no installation;
-- no required runtime installation;
-- read-only by design;
-- no UAC path;
-- local diagnosis;
-- sanitized report/export;
-- customer-safe mode characteristics always enforced.
+- self-contained Windows package;
+- no installation/runtime installation;
+- permanently read-only;
+- no UAC/helper path;
+- Quick/Advanced diagnosis reads;
+- preventive inspection;
+- technician checklist;
+- baseline comparison/import/export where policy allows;
+- sanitized reports;
+- service-case evidence collection without local remediation;
+- Customer Safe semantics.
 
 ### Portable Pro
 
 Everything in Lite plus:
 
-- explicitly confirmed repair plans;
+- explicit RepairPlan/local-remediation workflows;
 - temporary elevated helper;
 - selected-job cancellation;
 - controlled spooler restart;
-- approved queue repair;
-- vendor-native diagnostics/configuration reads;
-- safe diagnostic print where allowed;
-- N2/N3 support bundle.
+- approved queue remediation;
+- safe diagnostic print;
+- full N2/N3 bundles/service cases;
+- additional device-native diagnostics as capability/policy permit.
 
 ### Enterprise
 
-Planned capabilities:
+Planned, after dedicated ADRs:
 
 - managed installation;
 - inventory/history;
-- policy profiles;
-- role-based control if a central service is added;
-- alerting/health trends;
-- enterprise audit/retention;
-- optional agent lifecycle.
+- preventive schedules/history;
+- configuration baselines/drift;
+- health components/trends;
+- explainable alerts;
+- service-case history;
+- fleet policy;
+- RBAC/audit/retention;
+- optional collector/agent lifecycle;
+- centralized dashboard.
 
-Enterprise is not permission to reuse the portable helper as an unrestricted system service. Its security model requires its own review/ADR.
-
-## Product modes
+## Main modes
 
 ### Quick Diagnosis
 
-Read-only one-click collection with progress by domain:
+Read-only collection focused on:
 
-- Hardware/device;
-- Driver;
-- Connection;
-- Spooler;
-- Queue;
-- Printer-native status.
+- Windows print subsystem;
+- driver;
+- connection;
+- queue/jobs;
+- device-native status when available.
 
 Output:
 
-- findings ordered by impact;
+- findings ordered by relevance/impact;
 - evidence;
-- likely layer of failure;
-- least-impact recommended next action;
-- explicit note when evidence is insufficient.
+- likely fault layer;
+- least-impact next step;
+- explicit insufficient-evidence state.
 
 ### Advanced Diagnostics
 
-Expandable views for:
+Expandable evidence for WinSpool, print processors, drivers/store, ports, PnP, services, Event Log, network endpoint checks, vendor-native status, firmware, counters and selected configuration.
 
-- Windows Print Subsystem;
-- WinSpool details;
-- print processors;
-- drivers and driver store;
-- ports;
-- TCP/IP/USB/PnP;
-- services;
-- print-related Windows events;
-- vendor-native status;
-- SGD/ZPL or equivalent vendor diagnostics where applicable;
-- firmware/counters;
-- configuration.
+### Preventive Inspection
 
-### Read-only / `--readonly`
+Read-only-first workflow:
 
-Hard guardrail. State-changing commands must be unreachable, not merely hidden. This mode remains read-only even when the caller is an administrator.
+```text
+Collect automatic evidence
++ apply source-backed maintenance policy
++ load applicable baseline/history
++ guide technician checklist
++ derive maintenance findings
++ determine service disposition
++ generate preventive report
+```
+
+### Analyze Failure
+
+Guided triage that keeps observation, inference, recommendation and action separate.
+
+### Collect Evidence / Prepare Escalation
+
+Produces a support/service case without requiring the operator to perform a repair.
+
+### `--readonly`
+
+Hard guardrail: state-changing methods are unreachable, not just hidden.
 
 ### Customer Safe
 
-Enforces:
-
-- no system writes;
-- no printer configuration writes;
+- no system/printer writes;
 - no diagnostic print;
-- no automatic network discovery/scan;
-- no upload;
-- no telemetry;
-- local session-only processing.
+- no automatic network scan;
+- no upload/telemetry;
+- local session processing only.
 
-## Field session
+## Preventive maintenance domain
 
-A session has a random ID and may optionally store operator-provided metadata such as a ticket reference. Customer/company fields are optional and should not be required for diagnosis.
+See `PREVENTIVE_MAINTENANCE.md`.
 
-Example timeline:
-
-```text
-14:31:12 Session started
-14:31:13 Selected printer discovered
-14:31:14 Spooler = Running
-14:31:15 4 jobs observed
-14:31:17 Device ready = false
-14:31:17 Device evidence = RibbonOut
-14:33:04 Operator requested CancelJob(job=918)
-14:33:04 Repair plan confirmed
-14:33:05 Job cancellation returned success
-14:33:07 Post-condition: queue healthy, device still RibbonOut
-```
-
-The timeline distinguishes observations, operator intent, execution, and validation.
-
-## Before/after
-
-Every repair-capable workflow captures relevant snapshot A and B.
-
-Example:
+Key concepts:
 
 ```text
-                       BEFORE       AFTER
-Spooler                Running      Running
-Selected queue jobs    7            0
-Device Ready           No           Yes
-Head                    Closed       Closed
-Ribbon                  OK           OK
+MaintenanceInspection
+MaintenanceTaskDefinition
+MaintenanceTaskResult
+MaintenancePolicy
+MaintenanceBaseline
+MaintenanceFinding
+MaintenanceRecommendation
+MaintenanceDue
+MaintenanceRecord
+HealthAssessment
+HealthContribution
+ConditionTrend
+TechnicianObservation
+ServiceDisposition
 ```
 
-A repair is reported `validated` only when its post-condition is actually observed.
+Maintenance intervals must be source-backed. Unknown applicability remains unknown.
 
-## Printer status UX
+## Field service scope
 
-Do not collapse all evidence into `ONLINE`/`ATTENTION`.
+See `FIELD_SERVICE_AND_ESCALATION.md`.
 
-Show normalized fields and source:
+ThermalOps does not assume the operator is a bench-repair technician. Generic field outcomes include:
+
+- continue in service;
+- continue with observation;
+- local remediation allowed;
+- escalate to authorized service;
+- remove from service only under explicit policy;
+- insufficient evidence.
+
+Company/customer/vendor-specific workflows are policy/configuration, not public-core assumptions.
+
+## Health UX
+
+Primary health display is explainable and component-based:
 
 ```text
-Windows
-  Driver: installed
-  Queue: 3 jobs
-  Spooler: running
-
-Transport
-  Endpoint: reachable
-  Channel: TCP/IP
-
-Printer
-  Responding: yes
-  Ready: no
-  Head: closed
-  Media: present
-  Ribbon: out
-  Temperature: normal
-
-Conclusion
-  Windows and transport are healthy. Printer reports Ribbon Out.
-
-Recommended action
-  Replace/check ribbon before changing Windows state.
+Overall: ATTENTION RECOMMENDED
+Device................ OK
+Windows............... OK
+Transport............. Observation
+Configuration......... Drift
+Maintenance........... Due soon
+Evidence completeness. 91%
 ```
 
-## Configuration snapshot/diff
+A numeric score is optional and secondary; every contribution must be deterministic, visible and versioned. AI does not generate the score.
 
-For vendor adapters that support safe configuration reads, ThermalOps can compare two devices or before/after snapshots.
+## Baselines and drift
 
-Candidate normalized fields:
+A baseline is an approved/reference state, not proof that every difference is wrong.
 
-- print darkness;
-- speed;
-- media mode;
-- width;
-- tear-off position;
-- print language;
-- firmware;
-- selected connectivity settings.
+Scope baselines by applicable dimensions such as model/family, DPI, media/application, firmware range, connection and policy/site profile.
 
-Write-back/import is not part of the initial read-only milestone.
+Show current vs baseline, evidence source, difference, severity, acknowledgement and recommendation.
 
-## Safe diagnostic label
+## Diagnostic label
 
-A future approved test label can include:
+A policy-permitted test may include session ID, model/DPI, barcode/QR, line widths, alignment and darkness/calibration patterns. Printing is a write operation and impossible in read-only/Customer Safe mode.
 
-- app/session ID;
-- model/DPI;
-- timestamp;
-- barcode and QR test;
-- line-width samples;
-- alignment markers;
-- darkness/calibration aids.
+Technician print-quality observations remain human-entered evidence.
 
-Printing is a write operation and must be disabled in read-only/customer-safe mode.
+## Service cases
 
-## Policy profiles
+A service case can include:
 
-A policy file may constrain capabilities without changing code.
+- target identity;
+- problem summary;
+- evidence/findings;
+- technician observations;
+- actions attempted/results;
+- preventive inspection;
+- disposition;
+- policy version;
+- attachments selected by operator;
+- privacy level;
+- hash/version manifest.
 
-Conceptual example:
+Direct vendor/RMA submission is not an early requirement.
+
+## Policies
+
+Policy can only reduce or constrain capability; it cannot enable a capability absent from the build.
+
+Candidate policy fields include:
 
 ```json
 {
   "allowNetworkDiscovery": false,
   "allowDiagnosticPrint": true,
   "allowSpoolerRestart": true,
+  "allowQueueRepair": true,
   "allowDriverInstall": false,
-  "allowFirmwareUpdate": false
+  "allowFirmwareUpdate": false,
+  "allowFullTechnicalExport": true,
+  "allowRemoveFromServiceDisposition": false
 }
 ```
 
-Policy can only reduce capability relative to the build's maximum capability; it must never enable a feature that the executable does not support.
+Maintenance tasks/schedules are versioned separately and preserve source/applicability.
 
 ## Non-goals for early milestones
 
-- replacing label-design software;
-- ERP/WMS integration engine;
-- remote-control platform;
+- replacing label design/print automation suites;
+- general Windows repair;
 - arbitrary script execution;
-- general Windows repair utility;
-- automatic firmware flashing;
+- physical printer disassembly workflow;
+- automatic parts replacement decisions;
+- autonomous firmware flashing;
 - automatic driver replacement;
-- mandatory cloud console;
+- mandatory cloud/login;
 - autonomous AI remediation;
-- broad unattended network scanning.
+- broad unattended network scanning;
+- automatic vendor/RMA submission;
+- predictive failure claims without validated data.

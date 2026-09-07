@@ -5,48 +5,33 @@
 ThermalOps starts as a **modular monolith** with a separately elevated helper as a security boundary.
 
 ```text
-+--------------------------------------------------+
-|                 ThermalOps.Desktop               |
-| Dashboard | Diagnosis | Jobs | Plans | Support   |
-+-------------------------+------------------------+
-                          |
-                          v
-+--------------------------------------------------+
-|              ThermalOps.Application              |
-| DiagnosePrinter | DiagnoseSpooler | RepairQueue  |
-| GenerateSupportBundle | RunSafePrintTest         |
-+-------------------------+------------------------+
-                          |
-                          v
-+--------------------------------------------------+
-|                 ThermalOps.Domain                |
-| Printer | PrintJob | Finding | Evidence          |
-| RepairPlan | RepairAction | Policy | Snapshot    |
-+-----------+----------------+---------------------+
-            |                |
-            v                v
-+-------------------+  +---------------------------+
-| Windows Infra     |  | Vendor Adapters           |
-| WinSpool / SCM    |  | Zebra first               |
-| PnP / Event Log   |  | future Honeywell / TSC    |
-+-------------------+  +---------------------------+
-            |
-            | read operations
-            v
-         Windows
++-------------------------------------------------------+
+|                  ThermalOps.Desktop                   |
+| Diagnose | Preventive | Failure | Support | Reports   |
++--------------------------+----------------------------+
+                           |
+                           v
++-------------------------------------------------------+
+|                ThermalOps.Application                 |
+| Diagnose | Inspect | Assess | Remediate | Escalate    |
++--------------------------+----------------------------+
+                           |
+                           v
++-------------------------------------------------------+
+|                   ThermalOps.Domain                   |
+| Printer | Evidence | Finding | Maintenance | Service  |
+| Snapshot | Policy | RepairPlan | Disposition          |
++------------+----------------------+-------------------+
+             |                      |
+             v                      v
++------------------------+   +--------------------------+
+| Windows Infrastructure |   | Vendor Adapters          |
+| WinSpool/SCM/PnP/Event |   | Zebra first              |
++------------------------+   +--------------------------+
 
-Only when required:
+Only when an approved write requires it:
 
-Desktop/Application
-      |
-      | structured authenticated local request
-      v
-Temporary Privileged Helper
-      |
-      +-- CancelJob
-      +-- RestartSpooler
-      +-- RepairQueue
-      +-- other explicitly approved future actions
+Application -> strict local IPC -> Temporary Privileged Helper -> Windows
 ```
 
 ## Proposed solution structure
@@ -69,143 +54,148 @@ tests/
 └── ThermalOps.EndToEnd.Tests/
 ```
 
-Add projects only when the milestone needs them; do not generate empty complexity for appearance.
+Do not create extra projects merely to make the architecture look sophisticated.
 
 ## Dependency direction
 
 ```text
-Desktop ------------> Application ------------> Domain
-Windows Infrastructure ----implements--------> Domain/Application ports
-Zebra Adapter --------------implements-------> Domain/Application ports
-Privileged Helper ----------implements-------> a tiny privileged contract
+Desktop ---------------------> Application --------> Domain
+Windows Infrastructure ------> application/domain ports
+Vendor Adapters -------------> application/domain ports
+Privileged Helper -----------> tiny typed privileged contract
 ```
 
-`Domain` must not reference:
+Domain must not reference WPF, P/Invoke, filesystem, network implementation, vendor SDK, database, AI SDK or installer technology.
 
-- WPF;
-- Windows API P/Invoke;
-- filesystem;
-- network stack;
-- vendor SDK;
-- database;
-- AI SDK.
-
-## Core domain concepts
+## Core evidence concepts
 
 ### PrinterIdentity
 
-Stable normalized identity composed from available evidence, not only display name. Potential inputs:
-
-- Windows queue identity;
-- port identity;
-- PnP device identity;
-- vendor serial/device identifier;
-- network endpoint.
-
-Identity resolution must tolerate partial evidence and avoid merging two physical devices merely because their friendly names match.
+Normalized identity assembled from available queue, port, PnP, vendor identifier/serial and endpoint evidence. Friendly name alone is insufficient.
 
 ### PrinterSnapshot
 
-Immutable observation set at a point in time containing normalized evidence references.
+Immutable point-in-time observation set.
 
 ### DiagnosticEvidence
 
-Fields:
+Contains source, timestamp, category, normalized value, safe raw representation when needed, target, and collection outcome.
 
-- source;
-- timestamp;
-- category;
-- normalized value;
-- optionally safe raw representation;
-- target resource;
-- collection outcome/error.
+### TechnicianObservation
+
+Human-entered evidence with operator/session/time attribution. Never presented as automatically measured data.
 
 ### DiagnosticFinding
 
-A conclusion derived from one or more evidence records.
+Conclusion derived from evidence IDs, with severity, certainty semantics, explanation and recommended next step.
 
-A finding contains severity, certainty semantics, explanation, evidence IDs, and recommended next step. It must not rewrite evidence.
+## Maintenance concepts
 
-### PrintJob
+### MaintenanceInspection
 
-Represents a job in a specific queue with stable queue/job identifiers, state flags, timestamps where available, document name only when policy allows, and age.
+A session/workflow that combines automatic evidence, applicable maintenance tasks, technician checks, baseline/history comparison and disposition.
 
-### RepairPlan
+### MaintenanceTaskDefinition
 
-Contains:
+Versioned task with applicability, source/reference, interval/trigger rule, safety notes and policy requirements.
 
-- plan ID;
-- target(s);
-- impact level;
-- preconditions;
-- actions;
-- snapshot requirements;
-- confirmation requirements;
-- expected post-conditions;
-- validation checks;
-- recovery steps;
-- policy decision.
+### MaintenanceTaskResult
 
-### RepairAction
+Result for one inspection: `Pass`, `Observation`, `Fail`, `NotPerformed`, `NotApplicable`, or `Blocked`.
 
-Strongly typed action. No free-form privileged command string.
+### MaintenanceBaseline
 
-Examples:
+Versioned approved/reference state with applicability scope.
 
-- `CancelPrintJob(queueId, jobId)`;
-- `RestartSpooler(expectedInitialState)`;
-- `RepairSelectedQueue(queueId)`.
+### MaintenanceDue
 
-A future action requires a code change, review, tests, and capability registration.
+Derived due state (`Unknown`, `NotDue`, `DueSoon`, `Due`, `Overdue`, etc.) with rule/source reference.
+
+### HealthAssessment
+
+Explainable aggregate of evidence/components. Optional numeric score stores every deterministic contribution and rule version.
+
+### ConditionTrend
+
+Historical observation/trend, not a proven failure cause.
+
+## Service concepts
+
+### ServiceDisposition
+
+Policy-aware field outcome such as continue, observe, local remediation, escalate, remove-from-service (only if allowed), or insufficient evidence.
+
+### ServiceCase
+
+Structured handoff containing target, evidence, findings, technician observations, actions/results, preventive inspection, disposition, attachments, privacy level and manifest.
+
+### EscalationPolicy
+
+Maps evidence/findings and operator authority to allowed/recommended next steps without embedding company/vendor-specific process into the public core.
+
+## Print job
+
+A `PrintJob` belongs to a specific queue and preserves stable queue/job identity, state flags, timestamps where available and policy-controlled document metadata.
+
+## Local remediation / RepairPlan
+
+`RepairAction` is strongly typed. Examples:
+
+```text
+CancelPrintJob(queueId, jobId)
+RestartSpooler(expectedInitialState)
+RepairSelectedQueue(queueId, strategyId)
+```
+
+No free-form privileged command string.
+
+Every `RepairPlan` includes targets, impact, rationale finding IDs, preconditions, snapshot, actions, confirmation, expected post-conditions, validation, recovery and policy decision.
 
 ## Windows boundaries
 
-Planned Windows implementations should prefer supported native APIs over shelling out:
+Prefer supported APIs:
 
-- WinSpool for printer/job enumeration and manipulation;
-- Service Control Manager APIs for Print Spooler status/control;
-- PnP/SetupAPI or supported managed Windows interfaces for device evidence;
-- Windows Event Log APIs for print-related events;
-- Windows networking APIs for narrowly scoped endpoint checks.
+- WinSpool for printer/job enumeration/control;
+- Service Control Manager for spooler state/control;
+- PnP/SetupAPI or supported managed interfaces for device evidence;
+- Event Log APIs;
+- narrowly scoped network APIs for known endpoints.
 
-Shell/process invocation, if ever unavoidable for a specific supported tool, must use fixed executable/argument structures and never untrusted string concatenation.
+Shell/process invocation, if unavoidable for a specific supported tool, uses a fixed executable/argument schema and never arbitrary user/device strings.
 
-## Vendor adapter boundary
+## Vendor adapter
 
 Conceptual interface:
 
 ```text
 IPrinterVendorAdapter
   CanHandle(evidence)
-  DiscoverLocalAsync(policy)
-  ReadStatusAsync(printer)
-  ReadConfigurationAsync(printer, requestedKeys)
   GetCapabilitiesAsync(printer)
+  DiscoverLocalAsync(policy)
+  ReadIdentityAsync(printer)
+  ReadStatusAsync(printer)
+  ReadCountersAsync(printer)
+  ReadConfigurationAsync(printer, requestedKeys)
   RunApprovedDiagnosticAsync(...)
 ```
 
-Read and write capabilities are separate. An adapter that can read configuration does not automatically gain permission to change it.
+Adapters expose capabilities/evidence. They do **not** own business maintenance policy, field disposition, escalation policy, UI or AI decisions.
+
+Read and write capabilities are separate.
 
 ## Zebra adapter direction
 
-Use official/supported Zebra capabilities where practical:
+Use supported Zebra Link-OS / SGD / ZPL mechanisms where practical and validated. Preserve vendor-native source and capability/firmware applicability.
 
-- Link-OS SDK;
-- SGD for supported configuration/status reads;
-- ZPL status queries when appropriate;
-- USB/network discovery mechanisms allowed by policy.
-
-Normalize vendor-specific values into domain evidence while preserving the vendor-native source.
+Potential evidence includes readiness, head/media/ribbon/pause/temperature conditions, device warnings/errors, firmware, counters and selected read-only settings.
 
 ## Connection model
-
-Represent transport independently from printer vendor:
 
 ```text
 Usb
 Dot4
-TcpRaw9100
-TcpTls9143
+TcpRaw
+TcpTls
 Lpr
 WindowsShare
 Bluetooth
@@ -215,64 +205,63 @@ BrowserBridge
 Unknown
 ```
 
-The exact port number is evidence, not identity of the transport by itself.
+Port number/name is evidence, not sufficient transport identity by itself.
 
 ## Privileged helper
 
-The helper is a separate trust boundary, not a utility process with general command execution.
-
 Required properties:
 
-- launched only for a required operation in Portable Pro;
-- UAC elevation only for the helper;
-- local IPC with restrictive ACL;
-- protocol versioning;
-- session-bound nonce/token;
-- caller identity/process validation where practical;
-- strongly typed request schema;
+- launched only for an approved Portable Pro action;
+- UAC applies to helper, not UI;
+- restrictive local IPC ACL;
+- protocol version;
+- session binding/nonce;
+- caller validation where practical;
+- strongly typed request;
 - capability allowlist;
-- bounded input sizes;
-- explicit timeouts;
-- structured result schema;
-- terminates after the operation/session according to design;
-- leaves no service/daemon in portable mode.
+- bounded inputs/timeouts;
+- helper revalidates target/policy;
+- structured result;
+- no arbitrary process/shell/script/file/registry endpoint;
+- terminates and cleans up in portable mode.
 
 See ADR-0002.
 
-## Enterprise evolution
+## Portable vs Enterprise boundary
 
-Fleet capability can reuse domain/application/adapters but may add managed persistence and a service. Do not prematurely make portable code depend on an enterprise backend.
+Portable:
 
-Potential enterprise components require separate ADRs for:
+- no persistent database/agent;
+- session-local processing;
+- optional explicit baseline import/export;
+- works offline;
+- no dependency on central services.
 
-- local agent lifecycle;
-- central API;
-- authentication/RBAC;
-- data retention;
-- TLS/certificate management;
-- rate limiting;
-- health/readiness;
-- metrics/tracing;
-- update channel.
+Enterprise may reuse Domain/Application/adapters but requires ADRs for persistence, agent/service, API, authentication/RBAC, TLS, retention, backup/restore, update lifecycle and observability.
+
+Do not turn Portable into a thin client for Fleet.
 
 ## UI
 
-First UI direction is WPF on .NET 10 LTS. UI must display evidence and impact rather than hiding complexity behind a single status color.
+N1/field: progressive disclosure and guided disposition.
 
-N1: progressive disclosure and guided actions.
+N2/N3: detailed evidence, configuration/counters, maintenance, actions and service-case export.
 
-N2/N3: detailed evidence panels and export.
+Primary home actions:
+
+```text
+Quick Diagnosis
+Preventive Inspection
+Analyze Failure
+Collect Evidence
+Prepare Escalation
+Technical Reports
+```
+
+Destructive controls are secondary/contextual, never the visual center of the product.
 
 ## Composition root
 
-Desktop entry point composes:
+Desktop composes policy source, maintenance catalog/baseline provider, Windows implementations, vendor adapters, diagnostic/maintenance rules, support/service-case generator, privileged-helper client and view models.
 
-- policy source;
-- Windows implementations;
-- available vendor adapters;
-- diagnostic rule engine;
-- report generator;
-- privileged-helper client;
-- UI view models.
-
-No service locator hidden inside domain logic.
+No hidden service locator in domain logic.

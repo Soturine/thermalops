@@ -1,118 +1,128 @@
 # AGENTS.md
 
-This file is the operating contract for coding agents and automation working in ThermalOps.
+Operating contract for coding agents/automation working in ThermalOps.
 
 ## Required reading
 
-Before changing code or architecture, read in this order:
+Before architecture/behavior changes read:
 
 1. `ENGINEERING_CONSTITUTION.md`
 2. `docs/PRODUCT.md`
 3. `docs/ARCHITECTURE.md`
 4. `docs/SECURITY_AND_PRIVACY.md`
-5. `docs/DIAGNOSTICS_AND_REPAIR.md`
-6. the relevant ADRs and milestone section in `docs/ROADMAP.md`
+5. `docs/PREVENTIVE_MAINTENANCE.md`
+6. `docs/FIELD_SERVICE_AND_ESCALATION.md`
+7. `docs/DIAGNOSTICS_AND_REPAIR.md`
+8. relevant ADRs / `docs/ROADMAP.md`
 
-If a requested change conflicts with the constitution or safety model, stop and describe the conflict instead of silently weakening a guardrail.
+For packaging/enterprise changes also read `docs/DEPLOYMENT_AND_LIFECYCLE.md`. For fleet work read `docs/FLEET_AND_CONDITION_MONITORING.md`.
+
+If a request conflicts with the constitution/safety model, stop and surface the conflict instead of weakening a guardrail.
 
 ## Non-negotiable constraints
 
-- Domain rules are authoritative; UI convenience must not redefine them.
-- Default behavior is read-only.
-- The desktop UI must not require permanent elevation.
-- Privileged operations must be explicit, allowlisted, structured, auditable, and narrowly scoped.
-- Never add a generic `ExecuteCommand`, arbitrary PowerShell, arbitrary cmd, dynamic shell string, or equivalent privileged escape hatch.
-- Never use broad spool-directory deletion as the normal method to clear one printer/job.
-- Never label a device healthy solely because one Windows status integer is zero. Status must preserve evidence and bit/field semantics.
-- Never let AI decide or execute repair actions.
-- Never add required cloud, login, telemetry, or internet dependencies to core diagnosis/repair.
-- Never collect or export customer-identifying data without a clear purpose and sanitization path.
-- Never perform automatic network scanning. Discovery beyond local evidence requires explicit policy/operator permission.
-- Portable mode must leave no intentional persistence after a clean session exit.
-- Do not add firmware update or driver-install behavior without a dedicated ADR, threat analysis, rollback design, and milestone approval.
-- Do not add microservices to solve an in-process modularity problem.
+- Domain rules are authoritative.
+- Default is read-only.
+- Portable Lite is structurally read-only.
+- Main UI does not stay elevated.
+- Privileged actions are typed, allowlisted, narrow, auditable and policy-gated.
+- No generic shell/PowerShell/cmd/execute endpoint.
+- No broad spool-directory deletion for a selected job/queue.
+- Never declare physical health from one Windows status value.
+- Windows/vendor/technician evidence remain distinguishable.
+- AI never decides/executes repair, maintenance due, disposition, firmware/config changes or policy.
+- Core field functionality cannot require cloud/login/internet/telemetry.
+- No automatic broad network scan.
+- No automatic customer-data upload or USB logging.
+- Portable leaves no intentional persistence.
+- Maintenance intervals/lifetimes require a source/applicability record; never invent them.
+- Do not assume a field technician is authorized to disassemble/repair hardware.
+- Organization/customer/vendor-specific escalation rules are policy/configuration, not hard-coded public core.
+- Imported policy/baseline can only constrain/inform; it cannot unlock absent executable capability.
+- Firmware update/driver install requires dedicated ADR/threat/rollback design.
+- Do not add microservices to solve in-process modularity.
 
 ## Architecture expectations
 
-Start with a modular monolith and explicit boundaries:
+Start modular monolith:
 
-- `ThermalOps.Domain` — entities, value objects, invariants, findings, repair-plan model.
-- `ThermalOps.Application` — use cases and orchestration.
-- `ThermalOps.Infrastructure.Windows` — WinSpool, SCM, PnP, Event Log, filesystem/OS implementations.
-- `ThermalOps.Adapters.Zebra` — Zebra-specific discovery/status/configuration implementation.
-- `ThermalOps.Desktop` — WPF composition/UI only.
-- `ThermalOps.PrivilegedHelper` — minimal elevated process with strict IPC.
-- test projects mirroring the boundaries.
+- `ThermalOps.Domain` — evidence, printer/job, maintenance, disposition, service-case, repair-plan invariants;
+- `ThermalOps.Application` — use cases/orchestration;
+- `ThermalOps.Infrastructure.Windows` — WinSpool/SCM/PnP/Event Log/OS;
+- `ThermalOps.Adapters.Zebra` — Zebra capability/evidence adapter;
+- `ThermalOps.Desktop` — WPF composition/UI;
+- `ThermalOps.PrivilegedHelper` — minimal elevated process;
+- tests mirror boundaries.
 
-The entry point is the composition root. Infrastructure depends inward; domain must not depend on UI, Windows APIs, Zebra SDK, filesystem, networking, or AI.
+Domain must not depend on WPF, Windows interop implementation, filesystem/network implementation, vendor SDK, database, installer or AI.
 
-## Repair workflow
+## Evidence discipline
 
-Every state-changing operation must fit this lifecycle:
+Every important observation preserves source, timestamp, target, normalized value, collection outcome and safe raw representation when needed.
+
+Keep distinct:
+
+```text
+Observed fact
+Derived finding
+Maintenance recommendation
+Service disposition
+Operator request
+Executed action
+Verified result
+Technician observation
+```
+
+## Preventive maintenance discipline
+
+Maintenance tasks preserve task ID/version, source, applicability, trigger/interval, safety notes and result.
+
+Unknown data stays unknown. Baseline drift is not proof of failure. Health scoring, if added, must be deterministic/explainable/versioned.
+
+## Local remediation workflow
 
 ```text
 Preflight
-  -> Snapshot
-  -> Present plan/impact
-  -> Explicit confirmation
-  -> Execute
-  -> Verify
-  -> Recovery/Rollback if required
-  -> Post-condition
-  -> Audit event
+ -> Snapshot
+ -> Present plan/impact
+ -> Explicit confirmation
+ -> Execute
+ -> Verify
+ -> Recovery/Rollback if required
+ -> Post-condition
+ -> Audit event
 ```
 
-A command returning exit code 0 is not sufficient verification.
+Exit code 0 is not verification.
 
-## Evidence model
+## Field/escalation discipline
 
-Diagnostic findings must preserve:
-
-- source (`WindowsSpooler`, `PnP`, `EventLog`, `ZebraNative`, etc.);
-- observation timestamp;
-- raw/normalized value where safe;
-- confidence or certainty semantics if inference is involved;
-- reason/evidence;
-- recommended action separated from observed fact.
-
-Do not merge observations and conclusions into one opaque string.
+Do not hard-code assumptions about RMA, equipment removal, support levels, or who contacts a vendor. Use generic `ServiceDisposition` / `EscalationPolicy` and leave proprietary policy outside public core.
 
 ## Privacy
 
-Use session-local storage under a temporary OS directory. Do not write customer logs to removable media automatically. Sanitized report is the default export. Full technical bundles require explicit choice.
+Session-local temp storage. Sanitized report default. Full/support/vendor case explicit. Never commit real customer logs, hostnames, usernames, IPs, serials, tickets, configs, credentials or screenshots.
 
-Never commit real customer hostnames, usernames, IPs, serial numbers, tickets, printer configurations, logs, credentials, or screenshots.
+## Testing
 
-## Testing rules
-
-Changes are not done until relevant tests exist.
-
-At minimum consider:
-
-- unit tests for domain/diagnostic rules;
-- contract tests for adapters;
-- Windows integration tests where possible;
-- negative/failure-path tests;
-- security tests for privileged IPC;
-- a small number of real E2E scenarios;
-- hardware-in-the-loop checks for vendor-native behavior before claiming support.
+Relevant changes require tests: domain, contract, Windows integration, failure paths, helper security, preventive schedule/baseline, redaction/service-case, portable E2E, hardware-in-the-loop for vendor claims, and lifecycle tests for Enterprise packaging.
 
 Mocks are for true external boundaries, not for hiding broken internal integration.
 
 ## Git/CI
 
-- Keep commits logically scoped.
-- Push after logical checkpoints and let CI run asynchronously.
-- Preserve a known-green commit.
-- Do not tag/release red CI.
-- Do not auto-merge safety-sensitive changes.
-- Release tags must point to a green commit.
-- Status reports must say `fixed`, `partial`, `experimental`, `deferred`, or `not validated` accurately.
+- logical commits;
+- push logical checkpoints;
+- preserve last-known-green;
+- no release tag on red CI;
+- no safety-sensitive auto-merge;
+- release tag identifies validated green source;
+- report `fixed`, `partial`, `experimental`, `deferred`, `not validated` accurately.
 
-## Documentation
+## Documentation/ADRs
 
-For user-visible behavior, update the relevant docs in the same change. For architecture/security decisions, add or update an ADR rather than burying the decision in code comments.
+Behavior and docs change together. Architecture/security/lifecycle decisions use ADRs.
 
-## External code and licenses
+## External code/licenses
 
-Do not copy implementation code from projects without a compatible license and attribution review. Prefer official API documentation and independent implementation. Dependency additions require purpose, maintenance, security, and license review.
+Public source is not automatically reusable. Confirm license/attribution/security/maintenance before dependency/code reuse. Prefer official API docs and independent implementation.

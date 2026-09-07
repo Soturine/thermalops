@@ -1,154 +1,152 @@
 # Test Strategy
 
-ThermalOps combines domain logic, Windows integration, privileged execution, networking, and physical printers. Testing must match those risks.
+ThermalOps combines domain rules, Windows integration, vendor protocols, preventive maintenance, technician-entered observations, privileged execution, support exports and future fleet services. Test depth follows risk.
 
-## Layers
-
-### Domain unit tests
-
-High volume and fast.
+## Domain tests
 
 Cover:
 
-- status-flag normalization;
-- connection classification from structured evidence;
-- finding rules;
-- severity/impact;
-- repair-plan preconditions;
+- status flag normalization;
+- connection classification;
+- evidence vs finding separation;
+- diagnostic rules;
+- MaintenanceDue calculations;
+- maintenance task applicability/source/versioning;
+- baseline scope and drift;
+- HealthAssessment contributions and unknown handling;
+- ServiceDisposition policy rules;
+- RepairPlan preconditions/impact;
 - policy capability reduction;
-- redaction;
+- redaction/pseudonymization;
 - snapshot diff;
-- status terminology (`validated`, `partial`, etc.).
+- status terminology.
 
-### Application tests
+## Application tests
 
-Cover orchestration with controlled adapters:
+Cover orchestration:
 
-- evidence collection order/parallelism;
-- cancellation/timeouts;
-- finding aggregation;
-- repair-plan lifecycle;
-- support-bundle generation;
+- evidence collection cancellation/timeouts;
+- diagnosis/inspection sequencing;
+- preventive workflow with blocked/unsupported tasks;
+- technician observation attribution;
+- baseline import validation;
+- service-case generation;
+- repair lifecycle;
 - no write path in read-only mode;
-- AI failure does not block deterministic results.
+- AI outage does not block deterministic workflows.
 
-### Windows integration tests
+## Windows integration
 
-Run on Windows runners/VMs where safe.
-
-Cover:
+On controlled Windows runners/VMs:
 
 - WinSpool enumeration;
-- job enumeration on controlled test queues;
-- SCM read behavior;
-- Event Log query;
-- PnP read APIs;
-- access-denied behavior;
-- helper IPC without granting arbitrary capability.
+- jobs on test queues;
+- SCM reads;
+- Event Log reads;
+- PnP reads;
+- access denied;
+- helper IPC security boundary.
 
-Destructive spooler tests should use dedicated CI/test machines, not shared general runners.
+Destructive Spooler tests run only on dedicated environments.
 
-### Vendor adapter contract tests
+## Vendor adapter contract tests
 
-Fixtures and parser tests for:
+Fixtures/parsers for:
 
-- valid responses;
-- multiple simultaneous flags;
-- unknown firmware fields;
-- malformed/truncated response;
-- oversized response;
+- valid/multiple flags;
+- unsupported fields/capabilities;
+- unknown firmware;
+- malformed/truncated/oversized reply;
 - timeout/disconnect;
-- unsupported capability.
+- encoding issues;
+- counter/config value boundaries.
 
-### Hardware-in-the-loop
+## Hardware-in-the-loop
 
-Required before claiming supported real-device behavior.
+Required before claiming model/capability support. Record model, DPI, firmware, connection, driver, adapter version, capabilities tested and test date.
 
-Initial matrix should prioritize devices physically available to the project. Record:
+A feature remains `experimental`/`not validated` until required physical validation exists.
 
-- model;
-- DPI;
-- firmware;
-- connection type;
-- driver;
-- adapter version;
-- tested capabilities.
+## Preventive maintenance tests
 
-A feature can be `experimental` until hardware validation exists.
+Mandatory cases:
 
-### Security tests
+- manufacturer task applies vs does not apply;
+- model/firmware/media applicability unknown;
+- due/soon/due/overdue boundaries;
+- no invented due date when source data missing;
+- baseline compatible vs incompatible;
+- configuration drift acknowledged vs unacknowledged;
+- technician checklist incomplete;
+- automatic evidence never impersonates technician observation;
+- numeric health score (if implemented) explains every contribution;
+- unknown evidence does not become healthy;
+- predictive claim path remains unavailable before M9 criteria.
+
+## Service-case tests
+
+- sanitized vs full export;
+- identity-bearing fields redacted correctly;
+- missing/unsupported data represented in manifest;
+- attachments opt-in only;
+- path traversal/archive safety;
+- hash manifest consistency;
+- timeline separates request/execution/verification;
+- ServiceDisposition requires policy authority for `RemoveFromService`.
+
+## Security tests
 
 Privileged helper:
 
 - unauthorized caller;
-- wrong session token/nonce;
-- unsupported protocol version;
-- unknown action;
-- oversized message;
-- path/resource tampering;
-- replay attempt;
+- wrong nonce/token;
+- unsupported protocol/action;
+- oversized request;
+- target tampering;
+- replay;
 - helper crash;
 - UAC denied;
 - timeout;
-- UI terminates mid-operation.
+- UI exits mid-operation.
 
 Portable:
 
 - no persistence after clean exit;
-- cleanup failure reporting;
-- no log written beside executable by default;
-- read-only mode cannot reach write methods.
+- cleanup-failure reporting;
+- no USB/executable-directory log by default;
+- read-only cannot reach write methods;
+- imported baseline/policy cannot add executable capability.
 
-### Failure injection
+## Failure injection
 
-Mandatory cases for repair logic:
-
-- spooler already stopped;
-- spooler cannot stop;
-- spooler stops but cannot start;
-- service changes state externally mid-plan;
-- job disappears between plan and execution;
-- access denied;
-- selected printer disconnects;
-- device returns stale/malformed data;
-- network timeout;
-- support-bundle write fails;
-- disk full;
-- cleanup file locked;
-- helper exits unexpectedly.
+Include Spooler stop/start failures, external state changes, job disappearing, access denied, device disconnect, malformed device data, network timeout, export write failure, disk full, file lock, helper crash, corrupted baseline and migration failure in Enterprise when implemented.
 
 ## E2E scenarios
 
-Keep a small meaningful set:
-
-1. Quick Diagnosis read-only with no printers.
-2. Quick Diagnosis with one controlled Windows print queue.
-3. Portable read-only complete session and cleanup.
-4. Selected-job cancellation on dedicated test environment.
-5. Controlled spooler restart with before/after validation on dedicated environment.
-6. Zebra native status with real test printer when available.
-7. Sanitized support-bundle export and redaction assertions.
+1. Quick Diagnosis with no printers.
+2. Quick Diagnosis with controlled Windows queue.
+3. Portable Lite full read-only session and cleanup.
+4. Preventive inspection with synthetic policy/baseline and technician checklist.
+5. Sanitized preventive report.
+6. Service-case generation with redaction.
+7. Selected-job cancellation on dedicated machine.
+8. Controlled Spooler restart with recovery validation.
+9. Zebra native status with real test printer.
+10. Portable baseline import/compare/export without hidden persistence.
+11. Enterprise install/upgrade/uninstall when M5 exists.
 
 ## Definition of validated
 
-A feature is not `validated` merely because unit tests pass.
+- Windows feature -> Windows integration test;
+- privileged write -> failure/security tests;
+- Zebra/native claim -> compatible real hardware;
+- preventive schedule claim -> source/applicability tests;
+- Portable claim -> no-persistence E2E;
+- Enterprise lifecycle claim -> install/upgrade/uninstall tests;
+- predictive claim -> M9 validation program.
 
-Examples:
+## Performance/UX budgets
 
-- Windows integration feature: needs Windows integration test.
-- privileged repair: needs negative/security path coverage.
-- Zebra hardware status: needs compatible real-hardware validation for the claimed model/capability set.
-- portable cleanup: needs before/after persistence checks.
+Measure startup, first-diagnosis latency, device timeouts, UI responsiveness, preventive inspection duration, support bundle size, memory and fleet polling/alert throughput when relevant.
 
-## Performance
-
-Measure rather than guess. Useful budgets may include:
-
-- app startup;
-- Quick Diagnosis completion without network/vendor timeout;
-- bounded per-device timeout;
-- UI responsiveness during collection;
-- support-bundle size;
-- memory usage on typical enterprise endpoints.
-
-Never trade safety for a superficial benchmark.
+Do not advertise targets until measured and do not trade safety for benchmark appearance.

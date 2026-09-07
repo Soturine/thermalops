@@ -2,144 +2,120 @@
 
 ## Security objectives
 
-1. A read-only diagnosis cannot accidentally become a write.
-2. A compromised/untrusted UI input cannot turn the privileged helper into arbitrary code execution.
-3. A repair affects only the declared target/scope unless a clearly marked break-glass plan is confirmed.
-4. Portable execution leaves no intentional persistence.
-5. Customer information is not uploaded or exported silently.
-6. Release artifacts are identifiable, auditable, and signable.
-7. Failure should prefer a recoverable/known state over blind continuation.
+1. Read-only diagnosis/preventive workflows cannot accidentally become writes.
+2. UI/device/imported data cannot turn the helper into arbitrary code execution.
+3. A local remediation affects only declared scope unless a break-glass plan is explicitly confirmed.
+4. Preventive policy/baseline data cannot expand executable capabilities.
+5. Portable leaves no intentional persistence.
+6. Customer data is not uploaded/exported silently.
+7. Service-case exports make identity-bearing content visible before export.
+8. Release artifacts are identifiable/signable/auditable.
+9. Failure prefers a known/recoverable state over blind continuation.
 
 ## Trust boundaries
 
 ```text
 Operator
-   |
-   v
-Desktop UI (standard user)
-   |
-   v
-Application/Domain
-   |                    \
-   v                     v
-Windows/device reads   Vendor/device reads
-   |
-   | only when repair authorized
-   v
-IPC trust boundary
-   v
-Privileged Helper
-   v
-Windows privileged operations
+  -> Desktop UI (standard user)
+  -> Application / Domain
+      -> Windows reads
+      -> Vendor/device reads
+      -> Imported maintenance policy/baseline (untrusted input)
+      -> Technician observations
+
+Only approved write:
+Application -> IPC trust boundary -> Privileged Helper -> Windows
+
+Future Enterprise:
+Agent/API/database/dashboard are additional trust boundaries requiring ADR/threat-model updates.
 ```
 
-Enterprise networking/cloud introduces additional boundaries and requires separate threat-model updates.
-
-## Threats to design against
-
-### Privilege escalation abuse
-
-Threat: helper accepts attacker-controlled arbitrary commands.
+## Privileged helper abuse
 
 Controls:
 
 - no generic command execution;
-- strongly typed messages;
+- typed/versioned messages;
 - capability allowlist;
-- IPC ACL restricted to intended local principal/session;
+- restrictive IPC ACL;
 - caller/session validation;
-- short-lived nonce/token;
-- protocol version;
-- bounded input sizes;
-- canonical resource identifiers;
-- no path supplied for operations that should derive safe paths internally.
+- nonce/token;
+- bounded inputs/timeouts;
+- canonical target IDs;
+- helper revalidates policy/target;
+- no arbitrary path/service/registry/process endpoint.
 
-### Confused deputy
-
-Threat: a standard-user process tricks the elevated helper into modifying another queue/resource.
+## Confused deputy / scope overreach
 
 Controls:
 
-- helper revalidates target identity and policy;
-- request includes plan/session identity;
-- helper does not trust UI-provided display names as resource identity;
-- high-impact/global operations require stronger confirmation flow and capability.
+- target identity revalidation;
+- selected-job cancellation first;
+- queue-scoped operations where possible;
+- global reset separate break-glass capability;
+- visible impact/scope;
+- pre/post snapshots;
+- stronger confirmation for broad impact.
 
-### Queue overreach
+## Service-state corruption
 
-Threat: clearing one printer removes jobs from unrelated printers.
+Record initial Spooler state/configuration, use bounded waits, preserve policy-required state, verify post-condition and attempt recovery. Never force `Running` merely because the tool wants it.
 
-Controls:
+## Imported policy/baseline threats
 
-- selected-job cancellation through WinSpool first;
-- queue-scoped operations where supported;
-- global spool reset is a distinct break-glass action;
-- explicit impact display listing affected scope;
-- pre/post snapshots.
+Treat imported JSON/package as untrusted:
 
-### Service-state corruption
+- schema/version validation;
+- bounded file/field sizes;
+- no embedded script/expression engine;
+- no path/command execution;
+- policy can reduce capability only;
+- signature required before treating a package as organization-trusted when that feature exists;
+- baseline mismatch does not automatically authorize changes.
 
-Threat: repair leaves Print Spooler stopped or violates customer service policy.
-
-Controls:
-
-- record initial state/startup behavior;
-- bounded stop/start waits;
-- post-condition validation;
-- recovery path;
-- do not force `Running` when original/policy state requires otherwise;
-- report partial recovery honestly.
-
-### Customer-data leakage
-
-Threat: portable logs remain on USB or are exported to a ticket without redaction.
+## Customer-data leakage
 
 Controls:
 
-- `%TEMP%` session staging;
-- sanitized report default;
-- explicit full-bundle export;
+- session staging under `%TEMP%`;
+- sanitized default export;
+- full/service-case export explicit;
 - redaction pipeline;
-- no telemetry/upload by default;
-- cleanup validation.
+- no automatic USB save;
+- no upload/telemetry by default;
+- cleanup verification;
+- minimize document/job names and environment identifiers.
 
-### Malicious/malformed device responses
+## Attachments
 
-Threat: printer/network response causes parser crash, excessive allocation, or injection into logs/UI.
+Manual attachments are untrusted. Enforce explicit selection, file/size validation, safe archive/path handling, no execution, optional metadata stripping and privacy preview.
 
-Controls:
+## Malformed device/network data
 
-- bounded reads/timeouts;
-- strict parsers;
-- encoding handling;
-- output escaping;
-- size limits;
-- treat device data as untrusted;
-- never convert device text into executable commands.
+Use bounded reads, timeouts, strict parsing, encoding handling, output escaping and size limits. Never turn printer text into executable commands.
 
-### Network scanning risk
+## Network discovery
 
-Threat: tool triggers unauthorized broad discovery.
+Local/known endpoint first. Broader discovery requires explicit operator/policy authorization and bounded scope. No automatic scan in Customer Safe.
 
-Controls:
+## Maintenance safety
 
-- local evidence first;
-- explicit operator/policy permission for discovery beyond known endpoints;
-- bounded subnet/range if future discovery exists;
-- no automatic scan in Customer Safe;
-- audit discovery initiation.
+- no invented maintenance intervals;
+- source/applicability retained;
+- no automatic firmware/config changes from preventive findings;
+- no assumption that disassembly is allowed;
+- no LLM authority for due/disposition;
+- show manufacturer/model-specific safety notes rather than generalizing risky procedures.
 
-## Privileged operation allowlist
-
-Initial candidates, each requiring milestone implementation and tests:
+## Privileged capability candidates
 
 ```text
-CancelPrintJob(queue-id, job-id)
-RestartPrintSpooler(expected-initial-state)
-RepairSelectedQueue(queue-id, strategy-id)
+CancelPrintJob(queueId, jobId)
+RestartPrintSpooler(expectedInitialState)
+RepairSelectedQueue(queueId, strategyId)
 ```
 
-Not allowed:
+Explicitly forbidden generic capabilities:
 
 ```text
 ExecuteCommand(string)
@@ -151,96 +127,30 @@ StartArbitraryService(name)
 InstallArbitraryDriver(path)
 ```
 
-A future privileged capability is a source-code/API change, not data-driven arbitrary execution.
-
 ## Temporary files
 
-- generate unpredictable session directory names;
-- use OS-provided temporary base;
-- restrictive ACLs for sensitive staging where practical;
-- avoid following untrusted reparse points/symlinks for privileged file operations;
-- helper derives privileged paths internally;
-- validate ownership/location before delete;
-- cleanup only ThermalOps-owned session resources.
+Use unpredictable OS-temp session paths, restrictive ACLs where practical, reparse-point/symlink safety at privilege boundaries, ownership/location checks and cleanup only of ThermalOps-owned resources.
 
 ## Logging
 
-Structured local events should support redaction and avoid secrets.
-
-Do not log by default:
-
-- credentials/tokens;
-- full raw network payloads unless explicitly required and safe;
-- document content;
-- arbitrary spool file contents;
-- full environment variables;
-- unnecessary serial/user/hostname identifiers.
-
-## Support-bundle privacy levels
-
-### Sanitized (default)
-
-Redact or pseudonymize:
-
-- username;
-- hostname;
-- IP addresses where not essential;
-- print server names;
-- non-target printers;
-- document/job names if not required;
-- file paths containing user identity.
-
-### Full technical (explicit)
-
-May contain additional identifiers. UI must explain this and record that full export was chosen. Still exclude secrets and unrelated document content.
+Structured/redactable. Do not log secrets, arbitrary spool content, full environment variables, document contents or unnecessary identities.
 
 ## AI/privacy
 
-No customer evidence is sent to any external AI provider by default. If a future organization enables cloud AI:
-
-- opt-in policy;
-- explicit data classification;
-- redaction before transmission;
-- provider/retention agreement review;
-- no privileged action authority;
-- citations/evidence shown to the operator.
-
-Offline/local documentation retrieval is preferred where feasible and licensing permits.
+No external AI upload by default. Future cloud AI requires opt-in organization policy, redaction, provider/retention review, evidence citations and zero privileged/maintenance/disposition authority.
 
 ## Supply chain
 
-Release gates should grow to include:
+Release gates grow to include dependency/license review, secret scanning, CodeQL/static analysis, vulnerability scanning, SBOM, signed artifacts, checksums and provenance/attestation where feasible.
 
-- dependency review;
-- secret scanning;
-- CodeQL/static analysis;
-- SBOM generation;
-- known-vulnerability scanning;
-- license inventory;
-- signed release artifacts;
-- checksums;
-- provenance/attestation where feasible.
+## Code signing / endpoint controls
 
-Pin or otherwise govern CI actions/dependencies according to project policy. Avoid unreviewed installer scripts.
-
-## Code signing
-
-Production portable artifacts should use Authenticode when a signing identity is available. Signing is not a substitute for secure code, but it supports enterprise publisher verification/allowlisting and tamper detection.
+Production binaries should use Authenticode when available. ThermalOps cooperates with Defender, EDR/XDR, WDAC, AppLocker and removable-media/application controls rather than bypassing them.
 
 ## Secure updates
 
-Do not implement automatic update until there is a dedicated design for:
-
-- signed update manifests;
-- channel policy;
-- rollback;
-- downgrade rules;
-- proxy/offline environments;
-- enterprise deferral;
-- signature verification before execution.
-
-Portable manual updates are safer for early releases.
+No automatic update without ADR covering signed manifests, rollback/downgrade, proxy/offline environments, enterprise deferral and signature verification.
 
 ## Vulnerability reporting
 
-See root `SECURITY.md`. Until a private reporting channel is configured, do not request that reporters publish sensitive exploit details in a public issue.
+See root `SECURITY.md`.

@@ -16,13 +16,22 @@ REQUIRED = [
     "docs/PRODUCT.md",
     "docs/ARCHITECTURE.md",
     "docs/PORTABLE.md",
+    "docs/DEPLOYMENT_AND_LIFECYCLE.md",
+    "docs/PREVENTIVE_MAINTENANCE.md",
+    "docs/FIELD_SERVICE_AND_ESCALATION.md",
+    "docs/FLEET_AND_CONDITION_MONITORING.md",
     "docs/SECURITY_AND_PRIVACY.md",
     "docs/DIAGNOSTICS_AND_REPAIR.md",
     "docs/SUPPORT_BUNDLE.md",
     "docs/AI.md",
     "docs/TESTING.md",
     "docs/RELEASE_ENGINEERING.md",
+    "docs/RESEARCH.md",
     "docs/ROADMAP.md",
+    "docs/adr/0001-stack-and-desktop-ui.md",
+    "docs/adr/0002-privileged-helper.md",
+    "docs/adr/0003-field-service-and-preventive-scope.md",
+    "docs/adr/0004-maintenance-and-health-model.md",
 ]
 
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
@@ -32,8 +41,7 @@ def main() -> int:
     errors: list[str] = []
 
     for relative in REQUIRED:
-        path = ROOT / relative
-        if not path.is_file():
+        if not (ROOT / relative).is_file():
             errors.append(f"missing required file: {relative}")
 
     for path in sorted(ROOT.rglob("*.md")):

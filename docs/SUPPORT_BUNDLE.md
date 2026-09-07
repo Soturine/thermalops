@@ -1,34 +1,39 @@
-# Support Bundle and Session Reporting
+# Support Bundles, Preventive Reports, and Service Cases
 
-## Goals
+## Goal
 
-Support output should let N2/N3 reason from evidence without requiring the field technician to manually transcribe the environment, while minimizing unnecessary customer data.
+ThermalOps outputs should allow another support level or authorized service recipient to reason from evidence without forcing the field technician to manually transcribe the environment, while minimizing unnecessary customer data.
 
-## Session ID
+## Session identity
 
-Every run gets a random session/correlation ID. Optional ticket reference is metadata, not identity/security authority.
+Every run has a random session/correlation ID. Ticket/customer/operator fields are optional metadata and are not security authority.
 
-## Default sanitized report
+## Output classes
 
-Human-readable summary plus machine-readable JSON where useful.
+### Sanitized diagnostic report
 
-Sanitize by default:
+Default human-readable/machine-readable summary. Redact/pseudonymize unnecessary username, hostname, IP, print-server, non-target queue, document/job name and identity-bearing path data.
 
-- username;
-- hostname;
-- IP addresses unless essential to the selected endpoint diagnosis;
-- print server names;
-- non-target printer queues;
-- document/job names;
-- local paths containing identities.
+### Preventive maintenance report
 
-Use stable per-bundle pseudonyms when correlation is needed, e.g. `HOST-01`, `PRINTSERVER-01`, `IP-01`.
+Contains:
 
-## Full technical bundle
+- target and inspection time;
+- policy/baseline/catalog versions;
+- automatic checks;
+- technician checklist results;
+- maintenance due states;
+- configuration drift;
+- findings/recommendations;
+- local actions, if any;
+- service disposition;
+- next inspection only if source-backed.
+
+Automatic evidence and technician-entered observations are clearly separated.
+
+### Full technical bundle
 
 Explicit operator action only.
-
-Planned archive:
 
 ```text
 ThermalOps-SupportBundle-<session>.zip
@@ -38,63 +43,119 @@ ThermalOps-SupportBundle-<session>.zip
 ├── jobs.json
 ├── windows-events.json
 ├── device-status.json
+├── device-counters.json
 ├── device-config.json
 ├── network.json
+├── maintenance-inspection.json
+├── diagnostic-label-result.json
 ├── diagnostic.log
-├── repair-history.json
+├── action-history.json
 └── manifest.json
 ```
 
-Not every file is present if the collection was disabled/unavailable. The manifest records missing sections and reasons.
+Missing/blocked/unsupported sections are represented in the manifest rather than silently absent.
+
+### Service-case / escalation package
+
+```text
+ThermalOps-ServiceCase-<case>.zip
+├── summary.json
+├── device.json
+├── windows-print.json
+├── printer-status.json
+├── configuration.json
+├── counters.json
+├── events.json
+├── network.json
+├── preventive-inspection.json
+├── diagnostic-label-result.json
+├── timeline.json
+├── action-history.json
+├── attachments/
+└── manifest.json
+```
+
+Intended for N2/N3 or an authorized support/repair/vendor workflow. It is not automatically uploaded.
 
 ## Manifest
 
-Example fields:
+Candidate fields:
 
 ```json
 {
   "schemaVersion": "1.0",
   "sessionId": "...",
-  "thermalOpsVersion": "0.1.0",
+  "caseId": "...",
+  "thermalOpsVersion": "...",
   "commitSha": "...",
   "buildId": "...",
   "createdUtc": "...",
   "privacyLevel": "sanitized",
+  "policyVersion": "...",
+  "baselineVersion": "...",
   "files": [
     {"path": "summary.json", "sha256": "...", "schemaVersion": "1.0"}
   ]
 }
 ```
 
-## Repair history
+## Timeline/action history
 
-Must record intent and validation separately:
+Record intent separately from execution and validation:
 
 ```text
-Requested -> Confirmed -> Executed -> Verified/Partial/Failed -> Recovery outcome
+Observed
+Recommended
+Requested
+Confirmed
+Executed
+Verified / Partial / Failed
+Recovery outcome
+Disposition
 ```
 
-Do not report a repair as successful solely from command return status.
+Never equate command return success with verified repair success.
 
-## Storage behavior
+## Attachments
 
-Stage in:
+Future manual attachments/photos:
+
+- explicitly selected;
+- never auto-captured;
+- size/type bounded;
+- treated as untrusted content;
+- metadata stripped when policy requires;
+- excluded from sanitized export unless selected;
+- never executed.
+
+## Storage
+
+Stage under:
 
 ```text
 %TEMP%\ThermalOps\Sessions\<session-id>
 ```
 
-Do not automatically save to the executable directory or removable media.
+No automatic USB/executable-directory save.
+
+## Export privacy levels
+
+### Sanitized — default
+
+Minimize identities while preserving diagnostic correlation.
+
+### Full technical — explicit
+
+May include additional device/environment identifiers needed for authorized support. Still exclude secrets and unrelated document content.
+
+### Vendor/service case — explicit
+
+May require model/serial/firmware/problem classification depending on authorized workflow. The UI must show what will be included before export.
 
 ## Encryption
 
-Do not invent home-grown encryption. If encrypted support bundles become necessary, create an ADR selecting a standard format/key-distribution model appropriate to enterprise support. Sanitization and approved secure transfer are the early default.
+No home-grown encryption. If required, select a standard enterprise-appropriate format/key-distribution model through ADR.
 
 ## Schemas
 
-JSON documents should use versioned schemas once implementation begins. Structured schemas allow:
-
-- backward-compatible support tooling;
-- deterministic validation;
-- safe redaction tests;
-- future local analytics/AI without parsing free text.
+All machine-readable outputs use versioned schemas for validation, redaction tests, backwards compatibility, analytics and future knowledge/AI processing.
